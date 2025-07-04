@@ -1,73 +1,113 @@
-# Welcome to your Lovable project
 
-## Project info
+# CampusDish Meal Finder
 
-**URL**: https://lovable.dev/projects/8c35aaf1-a884-4724-81f2-86065837ebf5
+A modern React application for browsing university meal options with detailed nutrition information.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **School Selection**: Choose from Bishop's University, Carleton University, or McMaster University
+- **Dynamic Menu Loading**: Browse available meals for each selected school
+- **Detailed Nutrition Facts**: View calories, protein, fat, carbs, allergens, and ingredients
+- **Responsive Design**: Beautiful, mobile-friendly interface built with Tailwind CSS
+- **Mock API Structure**: Easily replaceable with real CampusDish API integration
 
-**Use Lovable**
+## Technologies Used
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8c35aaf1-a884-4724-81f2-86065837ebf5) and start prompting.
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling
+- **Shadcn/ui** for UI components
+- **TanStack Query** for data fetching and caching
+- **Lucide React** for icons
 
-Changes made via Lovable will be committed automatically to this repo.
+## Installation & Setup
 
-**Use your preferred IDE**
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3. **Open your browser:**
+   Navigate to `http://localhost:8080` to view the application
 
-Follow these steps:
+## Project Structure
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── pages/
+│   └── Index.tsx              # Main application page
+├── services/
+│   └── menuService.ts         # API service layer with mock data
+├── components/ui/             # Reusable UI components
+└── lib/
+    └── utils.ts              # Utility functions
 ```
 
-**Edit a file directly in GitHub**
+## Mock Data Location
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+All mock data is located in `src/services/menuService.ts`:
 
-**Use GitHub Codespaces**
+- **Menu Items**: `mockMenuData` object contains meals for each school
+- **Nutrition Data**: `mockNutritionData` object contains detailed nutrition information
+- **API Functions**: `fetchMenu()` and `fetchItem()` simulate API calls with realistic delays
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Integrating Real CampusDish API
 
-## What technologies are used for this project?
+To replace mock data with real CampusDish API calls:
 
-This project is built with:
+1. **Update the service functions** in `src/services/menuService.ts`
+2. **Replace mock data** with actual API endpoints
+3. **Add authentication** headers as needed
+4. **Handle real error cases** and response formats
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Example structure is provided in comments within the service file.
 
-## How can I deploy this project?
+## Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/8c35aaf1-a884-4724-81f2-86065837ebf5) and click on Share -> Publish.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-## Can I connect a custom domain to my Lovable project?
+## Features Overview
 
-Yes, you can!
+### School Selection
+Users can select from three universities using a dropdown menu. Each school has a unique set of meal options.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Menu Display
+- Shows available meals for the selected school
+- Displays meal name, category, and price
+- Clicking a meal loads detailed nutrition information
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Nutrition Facts
+- Comprehensive nutrition breakdown (calories, protein, fat, carbs)
+- Allergen warnings with visual badges
+- Complete ingredient lists
+- Color-coded nutrition grid for easy reading
+
+### Responsive Design
+- Mobile-first approach
+- Grid layout adapts to different screen sizes
+- Touch-friendly interface elements
+
+## Customization
+
+The application is designed to be easily customizable:
+
+- **Colors**: Update Tailwind classes or extend the theme
+- **Schools**: Modify the `schools` array in `Index.tsx`
+- **Menu Items**: Update `mockMenuData` in `menuService.ts`
+- **Nutrition Data**: Modify `mockNutritionData` structure as needed
+
+## Future Enhancements
+
+- User authentication and preferences
+- Meal planning and favorites
+- Real-time menu updates
+- Dietary restriction filtering
+- Meal reviews and ratings
