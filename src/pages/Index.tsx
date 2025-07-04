@@ -1,31 +1,11 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, Clock, Users, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Users } from 'lucide-react';
 import { fetchMenu, fetchItem } from '@/services/menuService';
-import DietaryIcons from '@/components/DietaryIcons';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface NutritionData {
-  name: string;
-  calories: number;
-  protein: number;
-  fat: number;
-  carbs: number;
-  allergens: string[];
-  ingredients: string;
-  dietary: string[];
-}
+import SchoolSelector from '@/components/SchoolSelector';
+import MenuList from '@/components/MenuList';
+import NutritionPanel from '@/components/NutritionPanel';
 
 const schools = [
   { id: 'bishops', name: "Bishop's University" },
@@ -72,170 +52,28 @@ const Index = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* School Selection */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ChevronDown className="w-5 h-5" />
-              Select Your School
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select value={selectedSchool} onValueChange={handleSchoolChange}>
-              <SelectTrigger className="w-full max-w-md">
-                <SelectValue placeholder="Choose your university..." />
-              </SelectTrigger>
-              <SelectContent>
-                {schools.map((school) => (
-                  <SelectItem key={school.id} value={school.id}>
-                    {school.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <SchoolSelector
+          schools={schools}
+          selectedSchool={selectedSchool}
+          onSchoolChange={handleSchoolChange}
+        />
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Menu Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Available Meals
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!selectedSchool && (
-                <p className="text-gray-500 text-center py-8">
-                  Please select a school to view available meals
-                </p>
-              )}
-              
-              {selectedSchool && menuLoading && (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              )}
-              
-              {selectedSchool && menuError && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Failed to load menu items. Please try again.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {selectedSchool && menuItems && (
-                <div className="space-y-3">
-                  {menuItems.map((item: MenuItem) => (
-                    <Button
-                      key={item.id}
-                      variant={selectedItem === item.id ? "default" : "outline"}
-                      className="w-full justify-start h-auto p-4"
-                      onClick={() => setSelectedItem(item.id)}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm opacity-70">{item.category}</div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <MenuList
+            selectedSchool={selectedSchool}
+            selectedItem={selectedItem}
+            menuItems={menuItems}
+            isLoading={menuLoading}
+            error={menuError}
+            onItemSelect={setSelectedItem}
+          />
 
-          {/* Nutrition Facts */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Nutrition Facts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!selectedItem && (
-                <p className="text-gray-500 text-center py-8">
-                  Select a meal to view nutrition information
-                </p>
-              )}
-              
-              {selectedItem && itemLoading && (
-                <div className="space-y-4">
-                  <Skeleton className="h-8 w-3/4" />
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <Skeleton key={i} className="h-6 w-full" />
-                    ))}
-                  </div>
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              )}
-              
-              {selectedItem && itemError && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Failed to load nutrition information. Please try again.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {selectedItem && itemDetails && (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{itemDetails.name}</h3>
-                    <DietaryIcons dietary={itemDetails.dietary} />
-                  </div>
-                  
-                  {/* Nutrition Grid */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-orange-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600">{itemDetails.calories}</div>
-                      <div className="text-sm text-gray-600">Calories</div>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{itemDetails.protein}g</div>
-                      <div className="text-sm text-gray-600">Protein</div>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{itemDetails.fat}g</div>
-                      <div className="text-sm text-gray-600">Fat</div>
-                    </div>
-                    <div className="bg-purple-50 p-3 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">{itemDetails.carbs}g</div>
-                      <div className="text-sm text-gray-600">Carbs</div>
-                    </div>
-                  </div>
-                  
-                  {/* Allergens */}
-                  {itemDetails.allergens && itemDetails.allergens.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Allergens</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {itemDetails.allergens.map((allergen, index) => (
-                          <Badge key={index} variant="destructive">
-                            {allergen}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Ingredients */}
-                  {itemDetails.ingredients && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Ingredients</h4>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {itemDetails.ingredients}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <NutritionPanel
+            selectedItem={selectedItem}
+            itemDetails={itemDetails}
+            isLoading={itemLoading}
+            error={itemError}
+          />
         </div>
       </main>
     </div>
