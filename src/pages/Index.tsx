@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fetchMenu, fetchItem } from '@/services/menuService';
+import DietaryIcons from '@/components/DietaryIcons';
 
 interface MenuItem {
   id: string;
@@ -23,6 +24,7 @@ interface NutritionData {
   carbs: number;
   allergens: string[];
   ingredients: string;
+  dietary: string[];
 }
 
 const schools = [
@@ -182,7 +184,10 @@ const Index = () => {
               
               {selectedItem && itemDetails && (
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold text-gray-900">{itemDetails.name}</h3>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{itemDetails.name}</h3>
+                    <DietaryIcons dietary={itemDetails.dietary} />
+                  </div>
                   
                   {/* Nutrition Grid */}
                   <div className="grid grid-cols-2 gap-4">

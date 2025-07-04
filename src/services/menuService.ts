@@ -1,3 +1,4 @@
+
 // Mock data structure - easily replaceable with real CampusDish API calls
 const mockMenuData = {
   bishops: [
@@ -28,7 +29,8 @@ const mockNutritionData = {
     fat: 18,
     carbs: 25,
     allergens: ['Dairy', 'Eggs'],
-    ingredients: 'Romaine lettuce, grilled chicken breast, parmesan cheese, croutons, caesar dressing, lemon juice'
+    ingredients: 'Romaine lettuce, grilled chicken breast, parmesan cheese, croutons, caesar dressing, lemon juice',
+    dietary: ['locally-grown']
   },
   'bishops-2': {
     name: 'Beef Stir Fry with Rice',
@@ -37,7 +39,8 @@ const mockNutritionData = {
     fat: 15,
     carbs: 72,
     allergens: ['Soy', 'Sesame'],
-    ingredients: 'Beef strips, jasmine rice, bell peppers, broccoli, carrots, soy sauce, sesame oil, garlic, ginger'
+    ingredients: 'Beef strips, jasmine rice, bell peppers, broccoli, carrots, soy sauce, sesame oil, garlic, ginger',
+    dietary: ['halal']
   },
   'bishops-3': {
     name: 'Vegetarian Pizza',
@@ -46,7 +49,8 @@ const mockNutritionData = {
     fat: 20,
     carbs: 65,
     allergens: ['Gluten', 'Dairy'],
-    ingredients: 'Pizza dough, tomato sauce, mozzarella cheese, bell peppers, mushrooms, red onions, olives, oregano'
+    ingredients: 'Pizza dough, tomato sauce, mozzarella cheese, bell peppers, mushrooms, red onions, olives, oregano',
+    dietary: ['vegetarian']
   },
   'bishops-4': {
     name: 'Fish & Chips',
@@ -55,7 +59,8 @@ const mockNutritionData = {
     fat: 28,
     carbs: 75,
     allergens: ['Fish', 'Gluten'],
-    ingredients: 'Cod fillet, russet potatoes, beer batter, tartar sauce, malt vinegar, mushy peas'
+    ingredients: 'Cod fillet, russet potatoes, beer batter, tartar sauce, malt vinegar, mushy peas',
+    dietary: ['sustainable']
   },
   'carleton-1': {
     name: 'Maple Glazed Salmon',
@@ -64,7 +69,8 @@ const mockNutritionData = {
     fat: 22,
     carbs: 18,
     allergens: ['Fish'],
-    ingredients: 'Atlantic salmon, maple syrup, soy sauce, garlic, ginger, asparagus, wild rice'
+    ingredients: 'Atlantic salmon, maple syrup, soy sauce, garlic, ginger, asparagus, wild rice',
+    dietary: ['sustainable', 'locally-grown']
   },
   'carleton-2': {
     name: 'Poutine Supreme',
@@ -73,7 +79,8 @@ const mockNutritionData = {
     fat: 35,
     carbs: 85,
     allergens: ['Dairy'],
-    ingredients: 'French fries, cheese curds, beef gravy, bacon bits, green onions, sour cream'
+    ingredients: 'French fries, cheese curds, beef gravy, bacon bits, green onions, sour cream',
+    dietary: ['locally-grown']
   },
   'carleton-3': {
     name: 'Butter Chicken with Naan',
@@ -82,7 +89,8 @@ const mockNutritionData = {
     fat: 25,
     carbs: 55,
     allergens: ['Dairy', 'Gluten'],
-    ingredients: 'Chicken thighs, tomato sauce, heavy cream, butter, garam masala, naan bread, basmati rice'
+    ingredients: 'Chicken thighs, tomato sauce, heavy cream, butter, garam masala, naan bread, basmati rice',
+    dietary: ['halal']
   },
   'carleton-4': {
     name: 'Mediterranean Wrap',
@@ -91,7 +99,8 @@ const mockNutritionData = {
     fat: 16,
     carbs: 42,
     allergens: ['Gluten', 'Dairy'],
-    ingredients: 'Whole wheat tortilla, grilled chicken, feta cheese, cucumber, tomatoes, red onion, tzatziki sauce'
+    ingredients: 'Whole wheat tortilla, grilled chicken, feta cheese, cucumber, tomatoes, red onion, tzatziki sauce',
+    dietary: ['locally-grown']
   },
   'mcmaster-1': {
     name: 'BBQ Pulled Pork Sandwich',
@@ -100,7 +109,8 @@ const mockNutritionData = {
     fat: 22,
     carbs: 68,
     allergens: ['Gluten'],
-    ingredients: 'Pork shoulder, BBQ sauce, brioche bun, coleslaw, pickles, sweet potato fries'
+    ingredients: 'Pork shoulder, BBQ sauce, brioche bun, coleslaw, pickles, sweet potato fries',
+    dietary: ['locally-grown']
   },
   'mcmaster-2': {
     name: 'Thai Green Curry',
@@ -109,7 +119,8 @@ const mockNutritionData = {
     fat: 18,
     carbs: 58,
     allergens: ['Coconut'],
-    ingredients: 'Chicken breast, coconut milk, green curry paste, thai basil, bell peppers, jasmine rice'
+    ingredients: 'Chicken breast, coconut milk, green curry paste, thai basil, bell peppers, jasmine rice',
+    dietary: ['halal', 'gluten-free']
   },
   'mcmaster-3': {
     name: 'Quinoa Power Bowl',
@@ -118,7 +129,8 @@ const mockNutritionData = {
     fat: 14,
     carbs: 58,
     allergens: [],
-    ingredients: 'Quinoa, black beans, avocado, cherry tomatoes, corn, lime vinaigrette, pumpkin seeds'
+    ingredients: 'Quinoa, black beans, avocado, cherry tomatoes, corn, lime vinaigrette, pumpkin seeds',
+    dietary: ['vegan', 'gluten-free', 'sustainable']
   },
   'mcmaster-4': {
     name: 'Classic Cheeseburger',
@@ -127,7 +139,8 @@ const mockNutritionData = {
     fat: 28,
     carbs: 48,
     allergens: ['Gluten', 'Dairy'],
-    ingredients: 'Beef patty, cheddar cheese, lettuce, tomato, onion, pickle, sesame seed bun, french fries'
+    ingredients: 'Beef patty, cheddar cheese, lettuce, tomato, onion, pickle, sesame seed bun, french fries',
+    dietary: ['locally-grown']
   }
 };
 
