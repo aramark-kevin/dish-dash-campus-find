@@ -1,23 +1,22 @@
-
 // Mock data structure - easily replaceable with real CampusDish API calls
 const mockMenuData = {
   bishops: [
-    { id: 'bishops-1', name: 'Grilled Chicken Caesar Salad', category: 'Salads', price: 12.99 },
-    { id: 'bishops-2', name: 'Beef Stir Fry with Rice', category: 'Asian', price: 14.50 },
-    { id: 'bishops-3', name: 'Vegetarian Pizza', category: 'Pizza', price: 13.25 },
-    { id: 'bishops-4', name: 'Fish & Chips', category: 'British', price: 15.99 }
+    { id: 'bishops-1', name: 'Grilled Chicken Caesar Salad', category: 'Salads' },
+    { id: 'bishops-2', name: 'Beef Stir Fry with Rice', category: 'Asian' },
+    { id: 'bishops-3', name: 'Vegetarian Pizza', category: 'Pizza' },
+    { id: 'bishops-4', name: 'Fish & Chips', category: 'British' }
   ],
   carleton: [
-    { id: 'carleton-1', name: 'Maple Glazed Salmon', category: 'Seafood', price: 18.99 },
-    { id: 'carleton-2', name: 'Poutine Supreme', category: 'Canadian', price: 11.50 },
-    { id: 'carleton-3', name: 'Butter Chicken with Naan', category: 'Indian', price: 16.75 },
-    { id: 'carleton-4', name: 'Mediterranean Wrap', category: 'Wraps', price: 10.99 }
+    { id: 'carleton-1', name: 'Maple Glazed Salmon', category: 'Seafood' },
+    { id: 'carleton-2', name: 'Poutine Supreme', category: 'Canadian' },
+    { id: 'carleton-3', name: 'Butter Chicken with Naan', category: 'Indian' },
+    { id: 'carleton-4', name: 'Mediterranean Wrap', category: 'Wraps' }
   ],
   mcmaster: [
-    { id: 'mcmaster-1', name: 'BBQ Pulled Pork Sandwich', category: 'Sandwiches', price: 13.99 },
-    { id: 'mcmaster-2', name: 'Thai Green Curry', category: 'Thai', price: 15.50 },
-    { id: 'mcmaster-3', name: 'Quinoa Power Bowl', category: 'Healthy', price: 12.75 },
-    { id: 'mcmaster-4', name: 'Classic Cheeseburger', category: 'Burgers', price: 14.25 }
+    { id: 'mcmaster-1', name: 'BBQ Pulled Pork Sandwich', category: 'Sandwiches' },
+    { id: 'mcmaster-2', name: 'Thai Green Curry', category: 'Thai' },
+    { id: 'mcmaster-3', name: 'Quinoa Power Bowl', category: 'Healthy' },
+    { id: 'mcmaster-4', name: 'Classic Cheeseburger', category: 'Burgers' }
   ]
 };
 

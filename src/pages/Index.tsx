@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Clock, Users, AlertCircle } from 'lucide-react';
@@ -14,7 +13,6 @@ interface MenuItem {
   id: string;
   name: string;
   category: string;
-  price: number;
 }
 
 interface NutritionData {
@@ -135,15 +133,12 @@ const Index = () => {
                     <Button
                       key={item.id}
                       variant={selectedItem === item.id ? "default" : "outline"}
-                      className="w-full justify-between h-auto p-4"
+                      className="w-full justify-start h-auto p-4"
                       onClick={() => setSelectedItem(item.id)}
                     >
                       <div className="text-left">
                         <div className="font-medium">{item.name}</div>
                         <div className="text-sm opacity-70">{item.category}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">${item.price.toFixed(2)}</div>
                       </div>
                     </Button>
                   ))}
