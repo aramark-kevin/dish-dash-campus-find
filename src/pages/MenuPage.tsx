@@ -37,7 +37,7 @@ const MenuPage = () => {
     navigate('/');
   };
 
-  const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_X-1ZO13ESdONcxyBWLTjJQ&format=png&size=40` : null;
+  const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_ZNltVkn2TbKeUEDcbL5Ppg&format=png&size=40` : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
