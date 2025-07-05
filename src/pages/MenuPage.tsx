@@ -1,9 +1,10 @@
 
 import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users } from 'lucide-react';
+import { Users, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { fetchMenu, fetchItem } from '@/services/menuService';
-import SchoolSelector from '@/components/SchoolSelector';
 import MenuList from '@/components/MenuList';
 import NutritionPanel from '@/components/NutritionPanel';
 
@@ -13,14 +14,17 @@ const schools = [
   { id: 'mcmaster', name: 'McMaster University' }
 ];
 
-const Index = () => {
-  const [selectedSchool, setSelectedSchool] = useState<string>('');
+const MenuPage = () => {
+  const { schoolId } = useParams<{ schoolId: string }>();
+  const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState<string>('');
 
+  const selectedSchool = schools.find(school => school.id === schoolId);
+
   const { data: menuItems, isLoading: menuLoading, error: menuError } = useQuery({
-    queryKey: ['menu', selectedSchool],
-    queryFn: () => fetchMenu(selectedSchool),
-    enabled: !!selectedSchool,
+    queryKey: ['menu', schoolId],
+    queryFn: () => fetchMenu(schoolId!),
+    enabled: !!schoolId,
   });
 
   const { data: itemDetails, isLoading: itemLoading, error: itemError } = useQuery({
@@ -29,9 +33,8 @@ const Index = () => {
     enabled: !!selectedItem,
   });
 
-  const handleSchoolChange = (schoolId: string) => {
-    setSelectedSchool(schoolId);
-    setSelectedItem(''); // Reset selected item when school changes
+  const handleBackToSchoolSelection = () => {
+    navigate('/');
   };
 
   return (
@@ -39,28 +42,32 @@ const Index = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">CampusDish</h1>
+                <p className="text-gray-600">{selectedSchool?.name || 'Menu'}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">CampusDish</h1>
-              <p className="text-gray-600">Meal Finder</p>
-            </div>
+            <Button
+              variant="outline"
+              onClick={handleBackToSchoolSelection}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Change School
+            </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <SchoolSelector
-          schools={schools}
-          selectedSchool={selectedSchool}
-          onSchoolChange={handleSchoolChange}
-        />
-
         <div className="grid lg:grid-cols-2 gap-8">
           <MenuList
-            selectedSchool={selectedSchool}
+            selectedSchool={schoolId || ''}
             selectedItem={selectedItem}
             menuItems={menuItems}
             isLoading={menuLoading}
@@ -80,4 +87,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default MenuPage;
