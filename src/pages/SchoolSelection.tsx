@@ -39,7 +39,7 @@ const SchoolSelection = () => {
 
       <main className="max-w-2xl mx-auto px-4 py-16">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to CampusDish</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Nutri</h2>
           <p className="text-gray-600">Please select your university to view available meals and nutrition information.</p>
         </div>
         
