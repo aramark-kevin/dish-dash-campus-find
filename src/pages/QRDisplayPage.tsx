@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,16 @@ const QRDisplayPage = () => {
   const location = useLocation();
   const nutritionData = location.state?.nutritionData;
   const selectedItemId = location.state?.selectedItemId;
+
+  // Auto-redirect timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('Auto-redirecting from QR display page after 1 minute of inactivity');
+      navigate(-1);
+    }, 60000); // 1 minute = 60,000 milliseconds
+
+    return () => clearTimeout(timer);
+  }, [navigate]);
 
   const handleBack = () => {
     navigate(-1);
