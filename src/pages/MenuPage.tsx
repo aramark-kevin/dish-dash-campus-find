@@ -106,10 +106,10 @@ const MenuPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 order-2 sm:order-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
@@ -122,27 +122,31 @@ const MenuPage = () => {
                     }}
                   />
                 ) : null}
-                <Users className={`w-6 h-6 text-white ${logoUrl ? 'hidden' : ''}`} />
+                <Users className={`w-4 h-4 sm:w-6 sm:h-6 text-white ${logoUrl ? 'hidden' : ''}`} />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
-                <p className="text-gray-600">{selectedSchool ? sanitizeDisplayText(selectedSchool.name) : 'Menu'}</p>
+              <div className="text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">NutriCheck</h1>
+                <p className="text-xs sm:text-sm lg:text-base text-gray-600 truncate max-w-[200px] sm:max-w-none">
+                  {selectedSchool ? sanitizeDisplayText(selectedSchool.name) : 'Menu'}
+                </p>
               </div>
             </div>
             <Button
               variant="outline"
               onClick={handleBackToSchoolSelection}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 order-1 sm:order-2 w-full sm:w-auto justify-center touch-manipulation"
+              size="sm"
             >
-              <ArrowLeft className="w-4 h-4" />
-              Change School
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Change School</span>
+              <span className="xs:hidden">Change</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           <MenuList
             selectedSchool={validatedSchoolId || ''}
             selectedItem={selectedItem}
@@ -164,9 +168,9 @@ const MenuPage = () => {
 
       {/* Passcode Dialog */}
       <Dialog open={showPasscodeDialog} onOpenChange={setShowPasscodeDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm sm:max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle>Enter Passcode</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Enter Passcode</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -183,7 +187,7 @@ const MenuPage = () => {
               value={passcode}
               onChange={(e) => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
               maxLength={4}
-              className="text-center text-lg tracking-widest"
+              className="text-center text-lg tracking-widest h-12 text-base touch-manipulation"
               disabled={adminService.isLockedOut()}
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && !adminService.isLockedOut()) {
@@ -199,17 +203,17 @@ const MenuPage = () => {
                 Attempts remaining: {adminService.getRemainingAttempts()}
               </p>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowPasscodeDialog(false)}
-                className="flex-1"
+                className="flex-1 h-11 touch-manipulation"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handlePasscodeSubmit}
-                className="flex-1"
+                className="flex-1 h-11 touch-manipulation"
                 disabled={passcode.length !== 4 || adminService.isLockedOut()}
               >
                 Submit
