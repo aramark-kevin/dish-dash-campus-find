@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { fetchMenu, fetchItem } from '@/services/menuService';
 import MenuList from '@/components/MenuList';
 import NutritionPanel from '@/components/NutritionPanel';
@@ -17,6 +19,9 @@ const MenuPage = () => {
   const { schoolId } = useParams<{ schoolId: string }>();
   const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState<string>('');
+  const [showPasscodeDialog, setShowPasscodeDialog] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
 
   // Auto-deselect timer
   useEffect(() => {
@@ -45,7 +50,19 @@ const MenuPage = () => {
   });
 
   const handleBackToSchoolSelection = () => {
-    navigate('/');
+    setShowPasscodeDialog(true);
+    setPasscode('');
+    setPasscodeError('');
+  };
+
+  const handlePasscodeSubmit = () => {
+    if (passcode === '4265') {
+      setShowPasscodeDialog(false);
+      navigate('/');
+    } else {
+      setPasscodeError('Incorrect passcode');
+      setPasscode('');
+    }
   };
 
   const handleQRDisplay = () => {
@@ -123,6 +140,52 @@ const MenuPage = () => {
           />
         </div>
       </main>
+
+      {/* Passcode Dialog */}
+      <Dialog open={showPasscodeDialog} onOpenChange={setShowPasscodeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Passcode</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Please enter the 4-digit passcode to change schools.
+            </p>
+            <Input
+              type="password"
+              placeholder="Enter 4-digit passcode"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              maxLength={4}
+              className="text-center text-lg tracking-widest"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handlePasscodeSubmit();
+                }
+              }}
+            />
+            {passcodeError && (
+              <p className="text-sm text-red-600">{passcodeError}</p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowPasscodeDialog(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePasscodeSubmit}
+                className="flex-1"
+                disabled={passcode.length !== 4}
+              >
+                Submit
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
