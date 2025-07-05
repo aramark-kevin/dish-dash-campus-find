@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { fetchMenu, fetchItem } from '@/services/menuService';
+import { adminService } from '@/services/adminService';
+import { validateSchoolId, sanitizeDisplayText } from '@/utils/validation';
+import { APP_CONFIG } from '@/config/constants';
 import MenuList from '@/components/MenuList';
 import NutritionPanel from '@/components/NutritionPanel';
 
@@ -23,6 +27,14 @@ const MenuPage = () => {
   const [passcode, setPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
 
+  // Validate schoolId on mount
+  useEffect(() => {
+    if (schoolId && !validateSchoolId(schoolId)) {
+      console.warn('Invalid school ID detected, redirecting to home');
+      navigate('/');
+    }
+  }, [schoolId, navigate]);
+
   // Auto-deselect timer
   useEffect(() => {
     if (!selectedItem) return;
@@ -30,17 +42,18 @@ const MenuPage = () => {
     const timer = setTimeout(() => {
       console.log('Auto-deselecting meal after 1 minute of inactivity');
       setSelectedItem('');
-    }, 60000); // 1 minute = 60,000 milliseconds
+    }, APP_CONFIG.UI.AUTO_DESELECT_TIMEOUT);
 
     return () => clearTimeout(timer);
   }, [selectedItem]);
 
-  const selectedSchool = schools.find(school => school.id === schoolId);
+  const validatedSchoolId = validateSchoolId(schoolId);
+  const selectedSchool = schools.find(school => school.id === validatedSchoolId);
 
   const { data: menuItems, isLoading: menuLoading, error: menuError } = useQuery({
-    queryKey: ['menu', schoolId],
-    queryFn: () => fetchMenu(schoolId!),
-    enabled: !!schoolId,
+    queryKey: ['menu', validatedSchoolId],
+    queryFn: () => fetchMenu(validatedSchoolId!),
+    enabled: !!validatedSchoolId,
   });
 
   const { data: itemDetails, isLoading: itemLoading, error: itemError } = useQuery({
@@ -56,11 +69,13 @@ const MenuPage = () => {
   };
 
   const handlePasscodeSubmit = () => {
-    if (passcode === '4265') {
+    const result = adminService.validatePasscode(passcode);
+    
+    if (result.success) {
       setShowPasscodeDialog(false);
       navigate('/');
     } else {
-      setPasscodeError('Incorrect passcode');
+      setPasscodeError(result.error || 'Incorrect passcode');
       setPasscode('');
     }
   };
@@ -74,12 +89,18 @@ const MenuPage = () => {
         } 
       });
     } else {
-      // Show a message or disable button if no item selected
       console.log('Please select a meal first to generate QR code');
     }
   };
 
-  const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_ZNltVkn2TbKeUEDcbL5Ppg&format=png&size=40` : null;
+  const logoUrl = selectedSchool ? 
+    `${APP_CONFIG.LOGO_SERVICE.BASE_URL}/${selectedSchool.domain}?token=${APP_CONFIG.LOGO_SERVICE.TOKEN}&format=${APP_CONFIG.LOGO_SERVICE.FORMAT}&size=${APP_CONFIG.LOGO_SERVICE.DEFAULT_SIZE}` 
+    : null;
+
+  // If invalid school ID, don't render the page
+  if (schoolId && !validatedSchoolId) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -92,7 +113,7 @@ const MenuPage = () => {
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
-                    alt={`${selectedSchool?.name} logo`}
+                    alt={`${selectedSchool ? sanitizeDisplayText(selectedSchool.name) : 'School'} logo`}
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -105,7 +126,7 @@ const MenuPage = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
-                <p className="text-gray-600">{selectedSchool?.name || 'Menu'}</p>
+                <p className="text-gray-600">{selectedSchool ? sanitizeDisplayText(selectedSchool.name) : 'Menu'}</p>
               </div>
             </div>
             <Button
@@ -123,7 +144,7 @@ const MenuPage = () => {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
           <MenuList
-            selectedSchool={schoolId || ''}
+            selectedSchool={validatedSchoolId || ''}
             selectedItem={selectedItem}
             menuItems={menuItems}
             isLoading={menuLoading}
@@ -151,21 +172,32 @@ const MenuPage = () => {
             <p className="text-sm text-gray-600">
               Please enter the 4-digit passcode to change schools.
             </p>
+            {adminService.isLockedOut() && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-700">Account temporarily locked due to too many failed attempts.</p>
+              </div>
+            )}
             <Input
               type="password"
               placeholder="Enter 4-digit passcode"
               value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
+              onChange={(e) => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
               maxLength={4}
               className="text-center text-lg tracking-widest"
+              disabled={adminService.isLockedOut()}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !adminService.isLockedOut()) {
                   handlePasscodeSubmit();
                 }
               }}
             />
             {passcodeError && (
               <p className="text-sm text-red-600">{passcodeError}</p>
+            )}
+            {!adminService.isLockedOut() && (
+              <p className="text-xs text-gray-500">
+                Attempts remaining: {adminService.getRemainingAttempts()}
+              </p>
             )}
             <div className="flex gap-2">
               <Button
@@ -178,7 +210,7 @@ const MenuPage = () => {
               <Button
                 onClick={handlePasscodeSubmit}
                 className="flex-1"
-                disabled={passcode.length !== 4}
+                disabled={passcode.length !== 4 || adminService.isLockedOut()}
               >
                 Submit
               </Button>

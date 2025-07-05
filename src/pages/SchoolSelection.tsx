@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
+import { validateSchoolId, sanitizeDisplayText } from '@/utils/validation';
 import SchoolSelector from '@/components/SchoolSelector';
 
 const schools = [
@@ -15,9 +16,14 @@ const SchoolSelection = () => {
   const navigate = useNavigate();
 
   const handleSchoolChange = (schoolId: string) => {
-    setSelectedSchool(schoolId);
-    // Navigate to menu page with selected school
-    navigate(`/menu/${schoolId}`);
+    // Validate school ID before navigation
+    const validatedSchoolId = validateSchoolId(schoolId);
+    if (validatedSchoolId) {
+      setSelectedSchool(validatedSchoolId);
+      navigate(`/menu/${validatedSchoolId}`);
+    } else {
+      console.error('Invalid school ID selected:', schoolId);
+    }
   };
 
   return (
