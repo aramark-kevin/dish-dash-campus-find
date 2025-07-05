@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import SchoolSelection from "./pages/SchoolSelection";
 import MenuPage from "./pages/MenuPage";
 import QRDisplayPage from "./pages/QRDisplayPage";
+import StaticNutritionPage from "./pages/StaticNutritionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<SchoolSelection />} />
           <Route path="/menu/:schoolId" element={<MenuPage />} />
           <Route path="/qr-display" element={<QRDisplayPage />} />
+          <Route path="/nutrition/:itemId" element={<StaticNutritionPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

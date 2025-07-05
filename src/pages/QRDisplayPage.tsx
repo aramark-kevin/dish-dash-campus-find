@@ -1,4 +1,3 @@
-
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,17 +9,18 @@ const QRDisplayPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const nutritionData = location.state?.nutritionData;
+  const selectedItemId = location.state?.selectedItemId;
 
   const handleBack = () => {
     navigate(-1);
   };
 
-  // Generate QR code URL (using a QR code service)
-  const generateQRCodeURL = (data: any) => {
-    if (!data) return '';
+  // Generate QR code URL with a link to the static nutrition page
+  const generateQRCodeURL = (itemId: string) => {
+    if (!itemId) return '';
     
-    const nutritionInfo = `${data.name}\nCalories: ${data.calories}\nProtein: ${data.protein}g\nFat: ${data.fat}g\nCarbs: ${data.carbs}g\nAllergens: ${data.allergens?.join(', ') || 'None'}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(nutritionInfo)}`;
+    const nutritionPageURL = `${window.location.origin}/nutrition/${itemId}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(nutritionPageURL)}`;
   };
 
   const renderAdvancedNutrition = (itemDetails: any) => {
@@ -66,7 +66,7 @@ const QRDisplayPage = () => {
     );
   };
 
-  if (!nutritionData) {
+  if (!nutritionData || !selectedItemId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
         <header className="bg-white shadow-sm border-b border-gray-200">
@@ -144,13 +144,13 @@ const QRDisplayPage = () => {
             <CardContent className="text-center">
               <div className="bg-white p-6 rounded-lg inline-block shadow-sm">
                 <img 
-                  src={generateQRCodeURL(nutritionData)}
+                  src={generateQRCodeURL(selectedItemId)}
                   alt="QR Code for Nutrition Facts"
                   className="w-64 h-64 mx-auto"
                 />
               </div>
               <p className="text-sm text-gray-600 mt-4">
-                Scan this QR code with your phone to view the nutrition information
+                Scan this QR code with your phone to view the nutrition information on a static page
               </p>
             </CardContent>
           </Card>

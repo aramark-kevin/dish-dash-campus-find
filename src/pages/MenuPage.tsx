@@ -52,7 +52,10 @@ const MenuPage = () => {
   const handleQRDisplay = () => {
     if (selectedItem && itemDetails) {
       navigate('/qr-display', { 
-        state: { nutritionData: itemDetails } 
+        state: { 
+          nutritionData: itemDetails,
+          selectedItemId: selectedItem
+        } 
       });
     } else {
       // Show a message or disable button if no item selected
