@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import SchoolSelection from "./pages/SchoolSelection";
 import MenuPage from "./pages/MenuPage";
-import QRScannerPage from "./pages/QRScannerPage";
+import QRDisplayPage from "./pages/QRDisplayPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,7 +20,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<SchoolSelection />} />
           <Route path="/menu/:schoolId" element={<MenuPage />} />
-          <Route path="/qr-scanner" element={<QRScannerPage />} />
+          <Route path="/qr-display" element={<QRDisplayPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

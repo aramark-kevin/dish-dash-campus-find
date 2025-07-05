@@ -49,8 +49,15 @@ const MenuPage = () => {
     navigate('/');
   };
 
-  const handleQRScanner = () => {
-    navigate('/qr-scanner');
+  const handleQRDisplay = () => {
+    if (selectedItem && itemDetails) {
+      navigate('/qr-display', { 
+        state: { nutritionData: itemDetails } 
+      });
+    } else {
+      // Show a message or disable button if no item selected
+      console.log('Please select a meal first to generate QR code');
+    }
   };
 
   const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_ZNltVkn2TbKeUEDcbL5Ppg&format=png&size=40` : null;
@@ -85,11 +92,12 @@ const MenuPage = () => {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={handleQRScanner}
+                onClick={handleQRDisplay}
+                disabled={!selectedItem || !itemDetails}
                 className="flex items-center gap-2"
               >
                 <QrCode className="w-4 h-4" />
-                QR Scanner
+                Show QR Code
               </Button>
               <Button
                 variant="outline"
