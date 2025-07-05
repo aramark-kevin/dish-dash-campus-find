@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users } from 'lucide-react';
 import { validateSchoolId, sanitizeDisplayText } from '@/utils/validation';
 import SchoolSelector from '@/components/SchoolSelector';
 
@@ -32,8 +31,12 @@ const SchoolSelection = () => {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
+            <div className="w-10 h-10">
+              <img 
+                src="/lovable-uploads/354bdc32-9467-4fbd-8335-4ee7db84012a.png" 
+                alt="NutriCheck Logo"
+                className="w-10 h-10 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
