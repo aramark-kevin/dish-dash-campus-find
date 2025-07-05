@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, QrCode } from 'lucide-react';
 import DietaryIcons from '@/components/DietaryIcons';
 
 interface NutritionData {
@@ -24,9 +24,10 @@ interface NutritionPanelProps {
   itemDetails?: NutritionData;
   isLoading: boolean;
   error: Error | null;
+  onQRDisplay: () => void;
 }
 
-const NutritionPanel = ({ selectedItem, itemDetails, isLoading, error }: NutritionPanelProps) => {
+const NutritionPanel = ({ selectedItem, itemDetails, isLoading, error, onQRDisplay }: NutritionPanelProps) => {
   const [isAdvanced, setIsAdvanced] = useState(false);
 
   const toggleView = () => {
@@ -38,14 +39,25 @@ const NutritionPanel = ({ selectedItem, itemDetails, isLoading, error }: Nutriti
       <CardHeader className="relative">
         <CardTitle>{isAdvanced ? 'Nutrition Information Panel' : 'Nutrition Facts'}</CardTitle>
         {selectedItem && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleView}
-            className="absolute top-4 right-4"
-          >
-            {isAdvanced ? 'Simple' : 'Advanced'}
-          </Button>
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onQRDisplay}
+              disabled={!selectedItem || !itemDetails}
+              className="flex items-center gap-2"
+            >
+              <QrCode className="w-4 h-4" />
+              QR Code
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleView}
+            >
+              {isAdvanced ? 'Simple' : 'Advanced'}
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent>

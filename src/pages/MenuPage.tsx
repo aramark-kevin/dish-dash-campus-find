@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, ArrowLeft, QrCode } from 'lucide-react';
+import { Users, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchMenu, fetchItem } from '@/services/menuService';
 import MenuList from '@/components/MenuList';
@@ -92,25 +91,14 @@ const MenuPage = () => {
                 <p className="text-gray-600">{selectedSchool?.name || 'Menu'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={handleQRDisplay}
-                disabled={!selectedItem || !itemDetails}
-                className="flex items-center gap-2"
-              >
-                <QrCode className="w-4 h-4" />
-                Show QR Code
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBackToSchoolSelection}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Change School
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={handleBackToSchoolSelection}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Change School
+            </Button>
           </div>
         </div>
       </header>
@@ -131,6 +119,7 @@ const MenuPage = () => {
             itemDetails={itemDetails}
             isLoading={itemLoading}
             error={itemError}
+            onQRDisplay={handleQRDisplay}
           />
         </div>
       </main>
