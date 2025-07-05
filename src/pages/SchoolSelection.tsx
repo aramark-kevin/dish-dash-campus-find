@@ -31,11 +31,11 @@ const SchoolSelection = () => {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10">
+            <div className="w-20 h-20">
               <img 
                 src="/lovable-uploads/354bdc32-9467-4fbd-8335-4ee7db84012a.png" 
                 alt="NutriCheck Logo"
-                className="w-10 h-10 object-contain"
+                className="w-20 h-20 object-contain"
               />
             </div>
             <div>
