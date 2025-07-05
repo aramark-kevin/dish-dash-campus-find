@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, ArrowLeft } from 'lucide-react';
+import { Users, ArrowLeft, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchMenu, fetchItem } from '@/services/menuService';
 import MenuList from '@/components/MenuList';
@@ -49,6 +49,10 @@ const MenuPage = () => {
     navigate('/');
   };
 
+  const handleQRScanner = () => {
+    navigate('/qr-scanner');
+  };
+
   const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_ZNltVkn2TbKeUEDcbL5Ppg&format=png&size=40` : null;
 
   return (
@@ -78,14 +82,24 @@ const MenuPage = () => {
                 <p className="text-gray-600">{selectedSchool?.name || 'Menu'}</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={handleBackToSchoolSelection}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Change School
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleQRScanner}
+                className="flex items-center gap-2"
+              >
+                <QrCode className="w-4 h-4" />
+                QR Scanner
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleBackToSchoolSelection}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Change School
+              </Button>
+            </div>
           </div>
         </div>
       </header>
