@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, ArrowLeft } from 'lucide-react';
@@ -18,6 +18,18 @@ const MenuPage = () => {
   const { schoolId } = useParams<{ schoolId: string }>();
   const navigate = useNavigate();
   const [selectedItem, setSelectedItem] = useState<string>('');
+
+  // Auto-deselect timer
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    const timer = setTimeout(() => {
+      console.log('Auto-deselecting meal after 1 minute of inactivity');
+      setSelectedItem('');
+    }, 60000); // 1 minute = 60,000 milliseconds
+
+    return () => clearTimeout(timer);
+  }, [selectedItem]);
 
   const selectedSchool = schools.find(school => school.id === schoolId);
 
