@@ -30,7 +30,7 @@ const SchoolSelection = () => {
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">CampusDish</h1>
+              <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
               <p className="text-gray-600">Meal Finder</p>
             </div>
           </div>
