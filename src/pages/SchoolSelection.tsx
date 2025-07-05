@@ -5,9 +5,9 @@ import { Users } from 'lucide-react';
 import SchoolSelector from '@/components/SchoolSelector';
 
 const schools = [
-  { id: 'bishops', name: "Bishop's University" },
-  { id: 'carleton', name: 'Carleton University' },
-  { id: 'mcmaster', name: 'McMaster University' }
+  { id: 'bishops', name: "Bishop's University", domain: 'ubishops.ca' },
+  { id: 'carleton', name: 'Carleton University', domain: 'carleton.ca' },
+  { id: 'mcmaster', name: 'McMaster University', domain: 'mcmaster.ca' }
 ];
 
 const SchoolSelection = () => {

@@ -9,9 +9,9 @@ import MenuList from '@/components/MenuList';
 import NutritionPanel from '@/components/NutritionPanel';
 
 const schools = [
-  { id: 'bishops', name: "Bishop's University" },
-  { id: 'carleton', name: 'Carleton University' },
-  { id: 'mcmaster', name: 'McMaster University' }
+  { id: 'bishops', name: "Bishop's University", domain: 'ubishops.ca' },
+  { id: 'carleton', name: 'Carleton University', domain: 'carleton.ca' },
+  { id: 'mcmaster', name: 'McMaster University', domain: 'mcmaster.ca' }
 ];
 
 const MenuPage = () => {
@@ -37,6 +37,8 @@ const MenuPage = () => {
     navigate('/');
   };
 
+  const logoUrl = selectedSchool ? `https://img.logo.dev/${selectedSchool.domain}?token=pk_X-1ZO13ESdONcxyBWLTjJQ&format=png&size=40` : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
@@ -44,8 +46,20 @@ const MenuPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center overflow-hidden">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={`${selectedSchool?.name} logo`}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <Users className={`w-6 h-6 text-white ${logoUrl ? 'hidden' : ''}`} />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
