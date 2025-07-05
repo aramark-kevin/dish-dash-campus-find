@@ -31,7 +31,7 @@ const SchoolSelection = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">NutriCheck</h1>
-              <p className="text-gray-600">by Aramark</p>
+              <p className="text-gray-600">by Aramark Canada</p>
             </div>
           </div>
         </div>
