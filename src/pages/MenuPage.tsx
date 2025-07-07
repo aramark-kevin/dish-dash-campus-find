@@ -12,6 +12,7 @@ import { validateSchoolId, sanitizeDisplayText } from '@/utils/validation';
 import { APP_CONFIG } from '@/config/constants';
 import MenuList from '@/components/MenuList';
 import NutritionPanel from '@/components/NutritionPanel';
+import DebugMenuData from '@/components/DebugMenuData';
 
 const schools = [
   { id: 'bishops', name: "Bishop's University", domain: 'ubishops.ca' },
@@ -164,6 +165,11 @@ const MenuPage = () => {
             onQRDisplay={handleQRDisplay}
           />
         </div>
+
+        {/* Debug component - only show for Alberta */}
+        {validatedSchoolId === 'alberta' && (
+          <DebugMenuData schoolId={validatedSchoolId} />
+        )}
       </main>
 
       {/* Passcode Dialog */}
