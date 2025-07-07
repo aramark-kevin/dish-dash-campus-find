@@ -33,7 +33,6 @@ serve(async (req) => {
     });
 
     console.log(`Response status: ${response.status} ${response.statusText}`);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -44,75 +43,31 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('First 2000 characters:', responseText.substring(0, 2000));
+    console.log('Full response:', responseText);
 
     let campusDishData;
     try {
       campusDishData = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError);
-      console.log('Response was:', responseText);
       throw new Error('Invalid JSON response from CampusDish API');
     }
 
-    console.log('=== PARSED CAMPUSDISH DATA STRUCTURE ===');
-    console.log('Root keys:', Object.keys(campusDishData || {}));
-    
-    // Log the structure in detail
-    if (campusDishData?.MealPeriods) {
-      console.log(`Found ${campusDishData.MealPeriods.length} meal periods`);
-      campusDishData.MealPeriods.forEach((mealPeriod: any, mIndex: number) => {
-        console.log(`Meal Period ${mIndex}:`, {
-          name: mealPeriod.Name,
-          stations: mealPeriod.Stations?.length || 0
-        });
-        
-        if (mealPeriod.Stations) {
-          mealPeriod.Stations.forEach((station: any, sIndex: number) => {
-            console.log(`  Station ${sIndex}:`, {
-              name: station.Name,
-              subcategories: station.SubCategories?.length || 0
-            });
-            
-            if (station.SubCategories) {
-              station.SubCategories.forEach((subcat: any, scIndex: number) => {
-                console.log(`    SubCategory ${scIndex}:`, {
-                  name: subcat.Name,
-                  items: subcat.Items?.length || 0
-                });
-                
-                if (subcat.Items && subcat.Items.length > 0) {
-                  subcat.Items.slice(0, 3).forEach((item: any, iIndex: number) => {
-                    console.log(`      Item ${iIndex}:`, {
-                      name: item.Name || item.ItemName || item.DisplayName,
-                      keys: Object.keys(item)
-                    });
-                  });
-                }
-              });
-            }
-          });
-        }
-      });
-    } else {
-      console.log('No MealPeriods found in response');
-    }
+    console.log('=== PARSED CAMPUSDISH DATA ===');
+    console.log('Full parsed data:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData, date);
+    
     console.log('=== FINAL TRANSFORMED MENU ===');
     console.log('Menu items count:', transformedMenu.length);
-    
-    if (transformedMenu.length > 0) {
-      console.log('Sample transformed items:', transformedMenu.slice(0, 3));
-    }
+    console.log('Transformed menu:', JSON.stringify(transformedMenu, null, 2));
 
     return new Response(JSON.stringify(transformedMenu), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in campusdish-menu function:', error);
-    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: error.message,
       details: 'Check function logs for more information'
@@ -126,104 +81,161 @@ serve(async (req) => {
 function transformCampusDishData(data: any, date: string) {
   console.log('=== STARTING TRANSFORMATION ===');
   console.log('Input data type:', typeof data);
-  console.log('Input data keys:', data ? Object.keys(data) : 'null');
+  console.log('Input data exists:', !!data);
   
   if (!data) {
     console.log('No data provided to transform');
     return getNoItemsResponse("No data received from CampusDish API");
   }
 
+  console.log('Data keys:', Object.keys(data));
+  
+  // Check for different possible root structures
+  const possibleRoots = ['MealPeriods', 'mealPeriods', 'Menu', 'menu', 'MenuData', 'menuData'];
+  let mealPeriods = null;
+  
+  for (const root of possibleRoots) {
+    if (data[root]) {
+      console.log(`Found meal periods under key: ${root}`);
+      mealPeriods = data[root];
+      break;
+    }
+  }
+  
+  if (!mealPeriods) {
+    console.log('No meal periods found in any expected location');
+    console.log('Available keys:', Object.keys(data));
+    return getNoItemsResponse("No meal periods found in the menu data structure");
+  }
+
+  if (!Array.isArray(mealPeriods)) {
+    console.log('Meal periods is not an array:', typeof mealPeriods);
+    return getNoItemsResponse("Meal periods data is not in expected array format");
+  }
+
+  console.log(`Found ${mealPeriods.length} meal periods`);
+  
   const menuItems = [];
   let totalItemsFound = 0;
   
-  try {
-    // Navigate through MealPeriods → Stations → SubCategories → Items
-    if (data.MealPeriods && Array.isArray(data.MealPeriods)) {
-      console.log(`Processing ${data.MealPeriods.length} meal periods`);
+  for (let mIndex = 0; mIndex < mealPeriods.length; mIndex++) {
+    const mealPeriod = mealPeriods[mIndex];
+    const mealPeriodName = mealPeriod.Name || mealPeriod.name || `Meal Period ${mIndex + 1}`;
+    
+    console.log(`\n=== PROCESSING MEAL PERIOD ${mIndex + 1}: ${mealPeriodName} ===`);
+    console.log('Meal period keys:', Object.keys(mealPeriod));
+    
+    // Check for different possible station keys
+    const possibleStationKeys = ['Stations', 'stations', 'Station', 'station'];
+    let stations = null;
+    
+    for (const key of possibleStationKeys) {
+      if (mealPeriod[key]) {
+        console.log(`Found stations under key: ${key}`);
+        stations = mealPeriod[key];
+        break;
+      }
+    }
+    
+    if (!stations || !Array.isArray(stations)) {
+      console.log(`No stations found for meal period: ${mealPeriodName}`);
+      continue;
+    }
+    
+    console.log(`Found ${stations.length} stations in ${mealPeriodName}`);
+    
+    for (let sIndex = 0; sIndex < stations.length; sIndex++) {
+      const station = stations[sIndex];
+      const stationName = station.Name || station.name || `Station ${sIndex + 1}`;
       
-      for (const mealPeriod of data.MealPeriods) {
-        const mealPeriodName = mealPeriod.Name || 'Unknown Meal Period';
-        console.log(`Processing meal period: ${mealPeriodName}`);
-        
-        if (mealPeriod.Stations && Array.isArray(mealPeriod.Stations)) {
-          console.log(`  Found ${mealPeriod.Stations.length} stations in ${mealPeriodName}`);
-          
-          for (const station of mealPeriod.Stations) {
-            const stationName = station.Name || 'Unknown Station';
-            console.log(`  Processing station: ${stationName}`);
-            
-            if (station.SubCategories && Array.isArray(station.SubCategories)) {
-              console.log(`    Found ${station.SubCategories.length} subcategories in ${stationName}`);
-              
-              for (const subCategory of station.SubCategories) {
-                const subCategoryName = subCategory.Name || 'Unknown SubCategory';
-                console.log(`    Processing subcategory: ${subCategoryName}`);
-                
-                if (subCategory.Items && Array.isArray(subCategory.Items)) {
-                  console.log(`      Found ${subCategory.Items.length} items in ${subCategoryName}`);
-                  totalItemsFound += subCategory.Items.length;
-                  
-                  for (const item of subCategory.Items) {
-                    const transformedItem = transformMenuItem(item, date, mealPeriodName, stationName, subCategoryName);
-                    if (transformedItem) {
-                      menuItems.push(transformedItem);
-                      console.log(`      Transformed item: ${transformedItem.name}`);
-                    }
-                  }
-                } else {
-                  console.log(`      No items found in subcategory: ${subCategoryName}`);
-                }
-              }
-            } else {
-              console.log(`    No subcategories found in station: ${stationName}`);
-            }
-          }
-        } else {
-          console.log(`  No stations found in meal period: ${mealPeriodName}`);
+      console.log(`\n--- Processing Station ${sIndex + 1}: ${stationName} ---`);
+      console.log('Station keys:', Object.keys(station));
+      
+      // Check for different possible subcategory keys
+      const possibleSubcategoryKeys = ['SubCategories', 'subCategories', 'SubCategory', 'subCategory', 'Categories', 'categories'];
+      let subCategories = null;
+      
+      for (const key of possibleSubcategoryKeys) {
+        if (station[key]) {
+          console.log(`Found subcategories under key: ${key}`);
+          subCategories = station[key];
+          break;
         }
       }
-    } else {
-      console.log('No MealPeriods array found in data');
-      console.log('Available top-level keys:', Object.keys(data));
+      
+      if (!subCategories || !Array.isArray(subCategories)) {
+        console.log(`No subcategories found for station: ${stationName}`);
+        continue;
+      }
+      
+      console.log(`Found ${subCategories.length} subcategories in ${stationName}`);
+      
+      for (let scIndex = 0; scIndex < subCategories.length; scIndex++) {
+        const subCategory = subCategories[scIndex];
+        const subCategoryName = subCategory.Name || subCategory.name || `SubCategory ${scIndex + 1}`;
+        
+        console.log(`\n--- Processing SubCategory ${scIndex + 1}: ${subCategoryName} ---`);
+        console.log('SubCategory keys:', Object.keys(subCategory));
+        
+        // Check for different possible item keys
+        const possibleItemKeys = ['Items', 'items', 'Item', 'item', 'MenuItems', 'menuItems'];
+        let items = null;
+        
+        for (const key of possibleItemKeys) {
+          if (subCategory[key]) {
+            console.log(`Found items under key: ${key}`);
+            items = subCategory[key];
+            break;
+          }
+        }
+        
+        if (!items || !Array.isArray(items)) {
+          console.log(`No items found for subcategory: ${subCategoryName}`);
+          continue;
+        }
+        
+        console.log(`Found ${items.length} items in ${subCategoryName}`);
+        totalItemsFound += items.length;
+        
+        for (let iIndex = 0; iIndex < items.length; iIndex++) {
+          const item = items[iIndex];
+          console.log(`\n--- Processing Item ${iIndex + 1} ---`);
+          console.log('Item keys:', Object.keys(item));
+          console.log('Item data:', JSON.stringify(item, null, 2));
+          
+          const transformedItem = transformMenuItem(item, date, mealPeriodName, stationName, subCategoryName);
+          if (transformedItem) {
+            menuItems.push(transformedItem);
+            console.log(`Successfully transformed item: ${transformedItem.name}`);
+          } else {
+            console.log('Failed to transform item');
+          }
+        }
+      }
     }
-    
-    console.log(`Total raw items found: ${totalItemsFound}`);
-    console.log(`Successfully transformed items: ${menuItems.length}`);
-    
-  } catch (transformError) {
-    console.error('Error during transformation:', transformError);
-    console.error('Transform error stack:', transformError.stack);
   }
-
+  
+  console.log(`\n=== TRANSFORMATION SUMMARY ===`);
+  console.log(`Total raw items found: ${totalItemsFound}`);
+  console.log(`Successfully transformed items: ${menuItems.length}`);
+  
   if (menuItems.length === 0) {
     if (totalItemsFound > 0) {
-      console.log('Items were found but transformation failed');
-      return getNoItemsResponse("Menu data structure found, but failed to transform items. Please check the logs for details.");
-    } else if (data.MealPeriods && data.MealPeriods.length > 0) {
-      console.log('MealPeriods exist but no items found');
-      return getNoItemsResponse("Menu data structure found, but no items present under any station. Please check if the date is valid or if the menu is unpublished.");
+      return getNoItemsResponse("Menu items were found but failed to transform. Check the logs for details.");
     } else {
-      console.log('No menu structure found');
-      return getNoItemsResponse("No menu data structure found for this date. The dining hall may not have published their menu yet.");
+      return getNoItemsResponse("Menu data structure found, but no items present under any station. Please check if the date is valid or if the menu is unpublished.");
     }
   }
 
-  // Remove duplicates based on name
-  const uniqueItems = menuItems.filter((item, index, self) => 
-    index === self.findIndex(t => t.name === item.name)
-  );
-
-  console.log(`Returning ${uniqueItems.length} unique menu items`);
-  return uniqueItems;
+  return menuItems;
 }
 
 function transformMenuItem(item: any, date: string, mealPeriod: string, station: string, subCategory: string) {
-  console.log('Transforming item with keys:', Object.keys(item));
-  
-  // Look for name fields
+  // Look for name fields with more variations
   const possibleNameFields = [
-    'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
-    'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label'
+    'Name', 'name', 'ItemName', 'itemName', 'MenuItemName', 'menuItemName', 
+    'DisplayName', 'displayName', 'Title', 'title', 'RecipeName', 'recipeName',
+    'ProductName', 'productName', 'FoodName', 'foodName', 'Description', 'description'
   ];
   
   let itemName = null;
@@ -236,51 +248,51 @@ function transformMenuItem(item: any, date: string, mealPeriod: string, station:
   }
   
   if (!itemName) {
-    console.log('No valid name found for item:', Object.keys(item));
+    console.log('No valid name found for item with keys:', Object.keys(item));
     return null;
   }
   
-  // Extract nutritional information
-  const getFieldValue = (fieldNames: string[], defaultValue: any = null) => {
-    for (const fieldName of fieldNames) {
-      if (item[fieldName] !== undefined && item[fieldName] !== null) {
-        if (typeof item[fieldName] === 'string') {
-          const parsed = parseFloat(item[fieldName]);
-          return !isNaN(parsed) ? parsed : item[fieldName];
-        }
-        return item[fieldName];
-      }
-    }
-    return defaultValue;
-  };
+  // Generate a unique ID
+  const itemId = `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`;
   
   const transformedItem = {
-    id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
+    id: itemId,
     name: itemName,
     category: subCategory,
     date: date,
     mealPeriod: mealPeriod,
     station: station,
     subcategory: subCategory,
-    servingSize: getFieldValue(['ServingSize', 'PortionSize', 'Serving'], 'Not specified'),
-    calories: getFieldValue(['Calories', 'CaloriesPerServing', 'Energy', 'Kcal'], 0),
-    protein: getFieldValue(['Protein', 'ProteinG', 'ProteinGrams'], 0),
-    fat: getFieldValue(['Fat', 'TotalFat', 'FatG', 'FatGrams'], 0),
-    carbs: getFieldValue(['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG'], 0),
-    sugars: getFieldValue(['Sugars', 'TotalSugars', 'Sugar'], 0),
+    servingSize: getFieldValue(item, ['ServingSize', 'servingSize', 'PortionSize', 'portionSize'], 'Not specified'),
+    calories: getFieldValue(item, ['Calories', 'calories', 'CaloriesPerServing', 'Energy', 'Kcal'], 0),
+    protein: getFieldValue(item, ['Protein', 'protein', 'ProteinG', 'ProteinGrams'], 0),
+    fat: getFieldValue(item, ['Fat', 'fat', 'TotalFat', 'totalFat', 'FatG', 'FatGrams'], 0),
+    carbs: getFieldValue(item, ['Carbohydrates', 'carbohydrates', 'Carbs', 'carbs', 'TotalCarbohydrates', 'CarbsG'], 0),
+    sugars: getFieldValue(item, ['Sugars', 'sugars', 'TotalSugars', 'Sugar', 'sugar'], 0),
     allergens: extractAllergens(item),
-    ingredients: item.Ingredients || item.Description || item.LongDescription || '',
-    dietary: extractDietaryInfo(item),
-    isVegan: getFieldValue(['IsVegan', 'Vegan'], false),
-    isVegetarian: getFieldValue(['IsVegetarian', 'Vegetarian'], false)
+    ingredients: item.Ingredients || item.ingredients || item.Description || item.description || '',
+    dietary: extractDietaryInfo(item)
   };
   
-  console.log(`Successfully transformed: ${itemName} from ${station} - ${subCategory}`);
+  console.log(`Transformed item result:`, JSON.stringify(transformedItem, null, 2));
   return transformedItem;
 }
 
+function getFieldValue(item: any, fieldNames: string[], defaultValue: any = null) {
+  for (const fieldName of fieldNames) {
+    if (item[fieldName] !== undefined && item[fieldName] !== null) {
+      if (typeof item[fieldName] === 'string') {
+        const parsed = parseFloat(item[fieldName]);
+        return !isNaN(parsed) ? parsed : item[fieldName];
+      }
+      return item[fieldName];
+    }
+  }
+  return defaultValue;
+}
+
 function extractAllergens(item: any): string[] {
-  const allergenFields = ['Allergens', 'AllergenInfo', 'Allergen', 'AllergenList', 'AllergenStatement'];
+  const allergenFields = ['Allergens', 'allergens', 'AllergenInfo', 'allergenInfo', 'Allergen', 'allergen'];
   
   for (const field of allergenFields) {
     const allergens = item[field];
@@ -293,7 +305,7 @@ function extractAllergens(item: any): string[] {
     }
     
     if (Array.isArray(allergens)) {
-      return allergens.map(a => typeof a === 'string' ? a : a.Name || a.AllergenName || '').filter(Boolean);
+      return allergens.map(a => typeof a === 'string' ? a : a.Name || a.name || '').filter(Boolean);
     }
   }
   
@@ -303,14 +315,13 @@ function extractAllergens(item: any): string[] {
 function extractDietaryInfo(item: any): string[] {
   const dietary = [];
   
-  // Check various dietary flag fields
   const dietaryFlags = [
-    { flags: ['IsVegan', 'Vegan', 'vegan'], label: 'vegan' },
-    { flags: ['IsVegetarian', 'Vegetarian', 'vegetarian'], label: 'vegetarian' },
-    { flags: ['IsGlutenFree', 'GlutenFree', 'glutenFree', 'GF'], label: 'gluten-free' },
-    { flags: ['IsHalal', 'Halal', 'halal'], label: 'halal' },
-    { flags: ['IsLocal', 'Local', 'local', 'LocallyGrown'], label: 'locally-grown' },
-    { flags: ['IsSustainable', 'Sustainable', 'sustainable'], label: 'sustainable' }
+    { flags: ['IsVegan', 'isVegan', 'Vegan', 'vegan'], label: 'vegan' },
+    { flags: ['IsVegetarian', 'isVegetarian', 'Vegetarian', 'vegetarian'], label: 'vegetarian' },
+    { flags: ['IsGlutenFree', 'isGlutenFree', 'GlutenFree', 'glutenFree', 'GF'], label: 'gluten-free' },
+    { flags: ['IsHalal', 'isHalal', 'Halal', 'halal'], label: 'halal' },
+    { flags: ['IsLocal', 'isLocal', 'Local', 'local', 'LocallyGrown'], label: 'locally-grown' },
+    { flags: ['IsSustainable', 'isSustainable', 'Sustainable', 'sustainable'], label: 'sustainable' }
   ];
   
   for (const { flags, label } of dietaryFlags) {
