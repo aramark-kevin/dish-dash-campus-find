@@ -35,15 +35,31 @@ serve(async (req) => {
       headers: {
         'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'NutriCheck/1.0'
       },
     });
+
+    console.log(`Response status: ${response.status} ${response.statusText}`);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       throw new Error(`CampusDish API error: ${response.status} ${response.statusText}`);
     }
 
-    const campusDishData = await response.json();
-    console.log('Raw CampusDish API response:', JSON.stringify(campusDishData, null, 2));
+    const responseText = await response.text();
+    console.log('Raw response text:', responseText);
+
+    let campusDishData;
+    try {
+      campusDishData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON response:', parseError);
+      console.log('Response was:', responseText);
+      throw new Error('Invalid JSON response from CampusDish API');
+    }
+
+    console.log('Parsed CampusDish API response:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData);
@@ -65,135 +81,162 @@ function transformCampusDishData(data: any) {
   const menuItems = [];
   
   try {
-    console.log('Transforming CampusDish data structure...');
+    console.log('=== TRANSFORMATION DEBUG ===');
+    console.log('Data type:', typeof data);
+    console.log('Data is array:', Array.isArray(data));
+    console.log('Data keys:', data ? Object.keys(data) : 'null/undefined');
     
-    // Log the top-level structure
-    console.log('Data keys:', Object.keys(data || {}));
-    
-    // CampusDish API might have different response structures
-    // Let's check multiple possible paths
-    let menuSections = [];
-    
-    if (data && Array.isArray(data)) {
-      menuSections = data;
-      console.log('Data is array, using directly');
-    } else if (data && data.Menu && Array.isArray(data.Menu)) {
-      menuSections = data.Menu;
-      console.log('Using data.Menu array');
-    } else if (data && data.menus && Array.isArray(data.menus)) {
-      menuSections = data.menus;
-      console.log('Using data.menus array');
-    } else if (data && data.MenuSections && Array.isArray(data.MenuSections)) {
-      menuSections = data.MenuSections;
-      console.log('Using data.MenuSections array');
-    } else if (data && data.LocationFullMenu && data.LocationFullMenu.Menu) {
-      menuSections = data.LocationFullMenu.Menu;
-      console.log('Using data.LocationFullMenu.Menu');
-    } else {
-      console.log('No recognizable menu structure found');
-      // If we can't find a standard structure, let's try to extract items from any nested arrays
-      const extractItemsFromObject = (obj: any, items: any[] = []) => {
-        if (Array.isArray(obj)) {
-          obj.forEach(item => extractItemsFromObject(item, items));
-        } else if (obj && typeof obj === 'object') {
-          // Check if this object looks like a menu item
-          if (obj.Name || obj.ItemName || obj.MenuItemName) {
-            items.push(obj);
-          }
-          // Recursively check nested objects
-          Object.values(obj).forEach(value => extractItemsFromObject(value, items));
-        }
-        return items;
-      };
-      
-      const extractedItems = extractItemsFromObject(data);
-      console.log('Extracted items from nested structure:', extractedItems.length);
-      
-      // Convert extracted items directly
-      for (const item of extractedItems) {
-        const transformedItem = {
-          id: `alberta-${item.MenuItemId || item.ItemId || item.Id || Math.random().toString(36).substr(2, 9)}`,
-          name: item.Name || item.ItemName || item.MenuItemName || 'Unknown Item',
-          category: item.Category || item.Section || 'General',
-          calories: parseInt(item.Calories) || 0,
-          protein: parseFloat(item.Protein) || 0,
-          fat: parseFloat(item.Fat) || 0,
-          carbs: parseFloat(item.Carbohydrates || item.Carbs) || 0,
-          allergens: item.Allergens ? item.Allergens.split(',').map((a: string) => a.trim()) : [],
-          ingredients: item.Ingredients || item.Description || '',
-          dietary: extractDietaryInfo(item)
-        };
-        menuItems.push(transformedItem);
-      }
+    if (!data) {
+      console.log('No data received');
+      return getNoItemsResponse();
     }
+
+    // Log the complete structure to understand the API response
+    console.log('Complete data structure:', JSON.stringify(data, null, 2));
     
-    // Process menu sections if we found them
-    if (menuSections.length > 0) {
-      console.log(`Processing ${menuSections.length} menu sections`);
-      
-      for (const menuSection of menuSections) {
-        console.log('Processing section:', menuSection.Name || 'Unknown Section');
-        
-        let sectionItems = [];
-        if (menuSection.MenuItems && Array.isArray(menuSection.MenuItems)) {
-          sectionItems = menuSection.MenuItems;
-        } else if (menuSection.Items && Array.isArray(menuSection.Items)) {
-          sectionItems = menuSection.Items;
-        } else if (menuSection.menu_items && Array.isArray(menuSection.menu_items)) {
-          sectionItems = menuSection.menu_items;
-        }
-        
-        console.log(`Found ${sectionItems.length} items in section`);
-        
-        for (const item of sectionItems) {
-          const transformedItem = {
-            id: `alberta-${item.MenuItemId || item.ItemId || item.Id || Math.random().toString(36).substr(2, 9)}`,
-            name: item.Name || item.ItemName || item.MenuItemName || 'Unknown Item',
-            category: menuSection.Name || menuSection.SectionName || 'General',
-            calories: parseInt(item.Calories) || 0,
-            protein: parseFloat(item.Protein) || 0,
-            fat: parseFloat(item.Fat) || 0,
-            carbs: parseFloat(item.Carbohydrates || item.Carbs) || 0,
-            allergens: item.Allergens ? item.Allergens.split(',').map((a: string) => a.trim()) : [],
-            ingredients: item.Ingredients || item.Description || '',
-            dietary: extractDietaryInfo(item)
-          };
+    // Try multiple possible paths in the CampusDish response
+    let itemsFound = false;
+    
+    // Path 1: Direct array
+    if (Array.isArray(data)) {
+      console.log('Processing direct array with', data.length, 'items');
+      for (const item of data) {
+        const transformedItem = transformMenuItem(item, 'Direct Array');
+        if (transformedItem) {
           menuItems.push(transformedItem);
+          itemsFound = true;
         }
       }
     }
+    
+    // Path 2: Check common CampusDish API response patterns
+    const possiblePaths = [
+      'Menu',
+      'menus', 
+      'MenuSections',
+      'LocationFullMenu',
+      'LocationFullMenu.Menu',
+      'LocationFullMenu.MenuSections',
+      'data',
+      'items',
+      'MenuItems'
+    ];
+    
+    for (const path of possiblePaths) {
+      if (!itemsFound) {
+        const pathData = getNestedProperty(data, path);
+        if (pathData) {
+          console.log(`Found data at path: ${path}`, typeof pathData, Array.isArray(pathData) ? `(${pathData.length} items)` : '');
+          
+          if (Array.isArray(pathData)) {
+            for (const section of pathData) {
+              console.log('Processing section:', section.Name || section.SectionName || 'Unknown Section');
+              
+              // Look for items in this section
+              const sectionItems = section.MenuItems || section.Items || section.menu_items || section.items || [];
+              console.log(`Section has ${sectionItems.length} items`);
+              
+              for (const item of sectionItems) {
+                const transformedItem = transformMenuItem(item, section.Name || section.SectionName || 'General');
+                if (transformedItem) {
+                  menuItems.push(transformedItem);
+                  itemsFound = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Path 3: Deep search for any objects that look like menu items
+    if (!itemsFound) {
+      console.log('Performing deep search for menu items...');
+      const foundItems = deepSearchForMenuItems(data);
+      console.log(`Deep search found ${foundItems.length} potential menu items`);
+      
+      for (const item of foundItems) {
+        const transformedItem = transformMenuItem(item, 'Deep Search');
+        if (transformedItem) {
+          menuItems.push(transformedItem);
+          itemsFound = true;
+        }
+      }
+    }
+    
+    console.log(`=== TRANSFORMATION COMPLETE ===`);
+    console.log(`Total items found: ${menuItems.length}`);
     
   } catch (transformError) {
-    console.error('Error transforming CampusDish data:', transformError);
-    // Return fallback data if transformation fails
-    return [{
-      id: 'alberta-fallback',
-      name: 'Menu items temporarily unavailable',
-      category: 'General',
-      calories: 0,
-      protein: 0,
-      fat: 0,
-      carbs: 0,
-      allergens: [],
-      ingredients: 'Please try again later',
-      dietary: []
-    }];
+    console.error('Error during transformation:', transformError);
+    console.error('Transform error stack:', transformError.stack);
   }
 
-  console.log(`Successfully transformed ${menuItems.length} menu items`);
+  if (menuItems.length === 0) {
+    console.log('No menu items were successfully transformed, returning fallback');
+    return getNoItemsResponse();
+  }
+
+  return menuItems;
+}
+
+function transformMenuItem(item: any, category: string) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
   
-  return menuItems.length > 0 ? menuItems : [{
-    id: 'alberta-no-items',
-    name: 'No menu items available for this date',
-    category: 'General',
-    calories: 0,
-    protein: 0,
-    fat: 0,
-    carbs: 0,
-    allergens: [],
-    ingredients: 'Please check back later or try a different date',
-    dietary: []
-  }];
+  // Look for name in various possible fields
+  const name = item.Name || item.ItemName || item.MenuItemName || item.DisplayName || item.title || item.Description;
+  
+  if (!name) {
+    console.log('Skipping item without name:', Object.keys(item));
+    return null;
+  }
+  
+  console.log(`Transforming item: ${name}`);
+  
+  return {
+    id: `alberta-${item.MenuItemId || item.ItemId || item.Id || Math.random().toString(36).substr(2, 9)}`,
+    name: name,
+    category: category,
+    calories: parseFloat(item.Calories || item.CaloriesPerServing || '0') || 0,
+    protein: parseFloat(item.Protein || '0') || 0,
+    fat: parseFloat(item.Fat || item.TotalFat || '0') || 0,
+    carbs: parseFloat(item.Carbohydrates || item.Carbs || item.TotalCarbohydrates || '0') || 0,
+    allergens: item.Allergens ? 
+      (typeof item.Allergens === 'string' ? item.Allergens.split(',').map((a: string) => a.trim()) : item.Allergens) : 
+      [],
+    ingredients: item.Ingredients || item.Description || item.LongDescription || '',
+    dietary: extractDietaryInfo(item)
+  };
+}
+
+function getNestedProperty(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current && current[key], obj);
+}
+
+function deepSearchForMenuItems(obj: any, items: any[] = []): any[] {
+  if (!obj || typeof obj !== 'object') {
+    return items;
+  }
+  
+  // Check if this object looks like a menu item
+  if (obj.Name || obj.ItemName || obj.MenuItemName) {
+    items.push(obj);
+  }
+  
+  // Recursively search nested objects and arrays
+  for (const value of Object.values(obj)) {
+    if (Array.isArray(value)) {
+      for (const arrayItem of value) {
+        deepSearchForMenuItems(arrayItem, items);
+      }
+    } else if (value && typeof value === 'object') {
+      deepSearchForMenuItems(value, items);
+    }
+  }
+  
+  return items;
 }
 
 function extractDietaryInfo(item: any): string[] {
@@ -208,4 +251,19 @@ function extractDietaryInfo(item: any): string[] {
   if (item.IsSustainable || item.Sustainable) dietary.push('sustainable');
   
   return dietary;
+}
+
+function getNoItemsResponse() {
+  return [{
+    id: 'alberta-no-items',
+    name: 'No menu items available for this date',
+    category: 'General',
+    calories: 0,
+    protein: 0,
+    fat: 0,
+    carbs: 0,
+    allergens: [],
+    ingredients: 'Please check back later or try a different date',
+    dietary: []
+  }];
 }
