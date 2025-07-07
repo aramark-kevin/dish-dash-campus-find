@@ -1,6 +1,3 @@
-
-import { supabase } from '@/integrations/supabase/client';
-
 // Mock data structure - easily replaceable with real CampusDish API calls
 const mockMenuData = {
   bishops: [
@@ -197,37 +194,6 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const fetchMenu = async (schoolId: string) => {
   console.log(`Fetching menu for school: ${schoolId}`);
-  
-  // For Alberta, use real CampusDish API
-  if (schoolId === 'alberta') {
-    try {
-      const today = new Date();
-      const dateString = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
-      
-      console.log(`Fetching Alberta menu from CampusDish for date: ${dateString}`);
-      
-      const { data, error } = await supabase.functions.invoke('campusdish-menu', {
-        body: { 
-          locationId: '5252', // University of Alberta location ID
-          date: dateString 
-        }
-      });
-
-      if (error) {
-        console.error('Error calling CampusDish API:', error);
-        throw new Error(`Failed to fetch Alberta menu: ${error.message}`);
-      }
-
-      console.log('Successfully fetched Alberta menu from CampusDish');
-      return data;
-    } catch (error) {
-      console.error('Alberta menu fetch failed:', error);
-      // Fallback to mock data if API fails
-      return mockMenuData.alberta || [];
-    }
-  }
-  
-  // For other schools, use mock data
   await delay(500); // Simulate network delay
   
   if (!schoolId || !mockMenuData[schoolId as keyof typeof mockMenuData]) {
@@ -239,36 +205,6 @@ export const fetchMenu = async (schoolId: string) => {
 
 export const fetchItem = async (itemId: string) => {
   console.log(`Fetching item details for: ${itemId}`);
-  
-  // For Alberta items, try to get from CampusDish first
-  if (itemId.startsWith('alberta-')) {
-    try {
-      // For now, we'll still use mock data structure for individual items
-      // In a full implementation, you'd want to store the detailed nutritional data
-      // from the CampusDish response and retrieve it here
-      await delay(300);
-      
-      // Check if we have mock data for this item
-      if (mockNutritionData[itemId as keyof typeof mockNutritionData]) {
-        return mockNutritionData[itemId as keyof typeof mockNutritionData];
-      }
-      
-      // Return a generic structure for CampusDish items not in mock data
-      return {
-        name: 'Menu Item from CampusDish',
-        calories: 0,
-        protein: 0,
-        fat: 0,
-        carbs: 0,
-        allergens: [],
-        ingredients: 'Nutritional information available from CampusDish API',
-        dietary: []
-      };
-    } catch (error) {
-      console.error('Error fetching Alberta item details:', error);
-    }
-  }
-  
   await delay(300); // Simulate network delay
   
   if (!itemId || !mockNutritionData[itemId as keyof typeof mockNutritionData]) {
