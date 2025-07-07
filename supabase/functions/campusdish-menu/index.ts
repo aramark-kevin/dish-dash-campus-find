@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -16,47 +15,21 @@ serve(async (req) => {
   try {
     const { locationId, date } = await req.json();
     
-    const username = Deno.env.get('CAMPUSDISH_USERNAME');
-    const password = Deno.env.get('CAMPUSDISH_PASSWORD');
-    
-    if (!username || !password) {
-      throw new Error('CampusDish credentials not configured');
-    }
+    console.log(`Fetching menu for location ${locationId} on date ${date}`);
 
-    console.log('Using credentials:', { username, password: password.substring(0, 3) + '***' });
-
-    // Try the direct URL format first (with credentials in URL)
-    const directUrl = `https://${encodeURIComponent(username)}:${encodeURIComponent(password)}@ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
+    // Use the direct URL with embedded credentials as provided
+    const directUrl = `https://SvcAcct%40ualberta.ca:%3E&Yyw4o5%5Bu@ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
     
-    console.log(`Attempting direct URL access: ${directUrl.replace(password, '***')}`);
+    console.log(`Making request to: ${directUrl}`);
     
-    let response;
-    try {
-      response = await fetch(directUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'NutriCheck/1.0',
-          'Cache-Control': 'no-cache'
-        },
-      });
-    } catch (directError) {
-      console.log('Direct URL failed, trying basic auth:', directError);
-      
-      // Fallback to basic auth header
-      const basicAuth = btoa(`${username}:${password}`);
-      const basicUrl = `https://ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
-      
-      response = await fetch(basicUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${basicAuth}`,
-          'Accept': 'application/json',
-          'User-Agent': 'NutriCheck/1.0',
-          'Cache-Control': 'no-cache'
-        },
-      });
-    }
+    const response = await fetch(directUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'NutriCheck/1.0',
+        'Cache-Control': 'no-cache'
+      },
+    });
 
     console.log(`Response status: ${response.status} ${response.statusText}`);
     console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -70,7 +43,7 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('First 500 chars:', responseText.substring(0, 500));
+    console.log('First 1000 chars:', responseText.substring(0, 1000));
 
     let campusDishData;
     try {
@@ -138,7 +111,7 @@ function transformCampusDishData(data: any) {
         'Menu', 'MenuItems', 'Items', 'Recipes', 'FoodItems', 'LocationMenu', 'FullMenu',
         'MenuData', 'RecipeData', 'ItemData', 'FoodData', 'MenuList', 'RecipeList',
         'LocationMenus', 'DiningLocations', 'Locations', 'Services', 'Categories',
-        'Periods', 'MenuPeriods', 'MealPeriods', 'DayParts'
+        'Periods', 'MenuPeriods', 'MealPeriods', 'DayParts', 'MenuContent', 'MenuStructure'
       ];
       
       for (const key of menuKeys) {
@@ -214,12 +187,12 @@ function extractMenuItemsFromArray(array: any[], source: string) {
       continue;
     }
     
-    // Look for name fields - expanded list
+    // Look for name fields - expanded list including exact CampusDish field names
     const possibleNameFields = [
       'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
       'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label',
       'ItemDescription', 'MenuDescription', 'ShortName', 'LongName',
-      'FormalName', 'PrintName', 'ServingName'
+      'FormalName', 'PrintName', 'ServingName', 'FoodItemName', 'ProductTitle'
     ];
     
     let itemName = null;
@@ -237,10 +210,10 @@ function extractMenuItemsFromArray(array: any[], source: string) {
       
       // Look for additional nutritional fields
       const nutritionFields = {
-        calories: ['Calories', 'CaloriesPerServing', 'Energy', 'Kcal', 'Cal'],
-        protein: ['Protein', 'ProteinG', 'ProteinGrams', 'Prot'],
-        fat: ['Fat', 'TotalFat', 'FatG', 'FatGrams'],
-        carbs: ['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG', 'CarbGrams', 'CHO']
+        calories: ['Calories', 'CaloriesPerServing', 'Energy', 'Kcal', 'Cal', 'TotalCalories'],
+        protein: ['Protein', 'ProteinG', 'ProteinGrams', 'Prot', 'ProteinContent'],
+        fat: ['Fat', 'TotalFat', 'FatG', 'FatGrams', 'FatContent'],
+        carbs: ['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG', 'CarbGrams', 'CHO', 'CarbContent']
       };
       
       const getNutritionValue = (fields: string[]) => {
