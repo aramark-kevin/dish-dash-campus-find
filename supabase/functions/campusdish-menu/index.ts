@@ -52,8 +52,7 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('First 1000 chars:', responseText.substring(0, 1000));
-    console.log('Last 500 chars:', responseText.substring(Math.max(0, responseText.length - 500)));
+    console.log('Response text:', responseText);
 
     let campusDishData;
     try {
@@ -65,23 +64,13 @@ serve(async (req) => {
     }
 
     console.log('=== PARSED CAMPUSDISH DATA ===');
-    console.log('Data type:', typeof campusDishData);
-    console.log('Is array:', Array.isArray(campusDishData));
-    console.log('Constructor:', campusDishData?.constructor?.name);
-    
-    if (campusDishData && typeof campusDishData === 'object') {
-      console.log('Root level keys:', Object.keys(campusDishData));
-      console.log('Complete data structure:');
-      console.log(JSON.stringify(campusDishData, null, 2));
-    }
+    console.log('Data:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData);
     console.log('=== FINAL TRANSFORMED MENU ===');
     console.log('Menu items count:', transformedMenu.length);
-    if (transformedMenu.length > 0) {
-      console.log('First item sample:', JSON.stringify(transformedMenu[0], null, 2));
-    }
+    console.log('Transformed menu:', JSON.stringify(transformedMenu, null, 2));
 
     return new Response(JSON.stringify(transformedMenu), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,6 +90,8 @@ serve(async (req) => {
 
 function transformCampusDishData(data: any) {
   console.log('=== STARTING TRANSFORMATION ===');
+  console.log('Input data type:', typeof data);
+  console.log('Input data:', JSON.stringify(data, null, 2));
   
   if (!data) {
     console.log('No data provided to transform');
@@ -110,43 +101,47 @@ function transformCampusDishData(data: any) {
   const menuItems = [];
   
   try {
-    // CampusDish API typically returns data in a specific structure
-    // Let's check for common patterns in their API responses
+    // CampusDish API response structure analysis
+    // Let's look for common patterns in CampusDish API responses
     
-    console.log('Analyzing data structure...');
-    console.log('Type:', typeof data);
-    console.log('Is Array:', Array.isArray(data));
+    // Pattern 1: Direct array of menu items
+    if (Array.isArray(data)) {
+      console.log('Data is array with', data.length, 'items');
+      const extractedItems = extractMenuItemsFromArray(data, 'root');
+      menuItems.push(...extractedItems);
+    }
     
-    if (typeof data === 'object' && data !== null) {
-      console.log('Object keys:', Object.keys(data));
+    // Pattern 2: Object with menu data properties
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      console.log('Data is object with keys:', Object.keys(data));
       
-      // Check each key to see if it contains menu data
-      for (const [key, value] of Object.entries(data)) {
-        console.log(`Checking key: ${key}, value type: ${typeof value}, is array: ${Array.isArray(value)}`);
-        
-        if (Array.isArray(value)) {
-          console.log(`Key ${key} contains array with ${value.length} items`);
-          
-          // Check if this array contains menu items
-          for (let i = 0; i < Math.min(3, value.length); i++) {
-            const item = value[i];
-            console.log(`Sample item ${i} in ${key}:`, JSON.stringify(item, null, 2));
+      // Look for menu-related properties
+      const menuKeys = ['Menu', 'MenuItems', 'Items', 'Recipes', 'FoodItems', 'LocationMenu', 'FullMenu'];
+      
+      for (const key of menuKeys) {
+        if (data[key]) {
+          console.log(`Found menu data in key: ${key}`);
+          if (Array.isArray(data[key])) {
+            const extractedItems = extractMenuItemsFromArray(data[key], key);
+            menuItems.push(...extractedItems);
+          } else if (typeof data[key] === 'object') {
+            // Recursively check nested objects
+            const nestedItems = transformCampusDishData(data[key]);
+            if (nestedItems.length > 0 && nestedItems[0].id !== 'alberta-no-items') {
+              menuItems.push(...nestedItems);
+            }
           }
-          
-          // Try to extract menu items from this array
+        }
+      }
+      
+      // Also check all properties for arrays that might contain menu items
+      for (const [key, value] of Object.entries(data)) {
+        if (Array.isArray(value) && value.length > 0) {
+          console.log(`Checking array property: ${key} with ${value.length} items`);
           const extractedItems = extractMenuItemsFromArray(value, key);
           if (extractedItems.length > 0) {
-            console.log(`Extracted ${extractedItems.length} items from ${key}`);
+            console.log(`Found ${extractedItems.length} menu items in ${key}`);
             menuItems.push(...extractedItems);
-          }
-        } else if (value && typeof value === 'object') {
-          console.log(`Key ${key} is object with keys:`, Object.keys(value));
-          
-          // Recursively check nested objects
-          const nestedItems = transformCampusDishData(value);
-          if (nestedItems.length > 0 && nestedItems[0].id !== 'alberta-no-items') {
-            console.log(`Found ${nestedItems.length} items in nested object ${key}`);
-            menuItems.push(...nestedItems);
           }
         }
       }
@@ -164,31 +159,46 @@ function transformCampusDishData(data: any) {
     return getNoItemsResponse();
   }
 
-  return menuItems;
+  // Remove duplicates based on name
+  const uniqueItems = menuItems.filter((item, index, self) => 
+    index === self.findIndex(t => t.name === item.name)
+  );
+
+  console.log(`Returning ${uniqueItems.length} unique menu items`);
+  return uniqueItems;
 }
 
 function extractMenuItemsFromArray(array: any[], source: string) {
+  console.log(`Extracting from array: ${source}, length: ${array.length}`);
   const items = [];
   
-  for (const item of array) {
-    if (!item || typeof item !== 'object') continue;
+  for (let i = 0; i < array.length; i++) {
+    const item = array[i];
+    console.log(`Processing item ${i}:`, JSON.stringify(item, null, 2));
     
-    // Look for various possible field names that indicate this is a menu item
+    if (!item || typeof item !== 'object') {
+      console.log(`Skipping item ${i}: not an object`);
+      continue;
+    }
+    
+    // Look for name fields
     const possibleNameFields = [
       'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
-      'RecipeName', 'ProductName', 'FoodName', 'Description'
+      'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label'
     ];
     
     let itemName = null;
+    let nameField = null;
     for (const field of possibleNameFields) {
-      if (item[field] && typeof item[field] === 'string') {
-        itemName = item[field];
+      if (item[field] && typeof item[field] === 'string' && item[field].trim()) {
+        itemName = item[field].trim();
+        nameField = field;
         break;
       }
     }
     
     if (itemName) {
-      console.log(`Found menu item: ${itemName} from source: ${source}`);
+      console.log(`Found menu item: "${itemName}" using field: ${nameField}`);
       
       const transformedItem = {
         id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
@@ -203,10 +213,14 @@ function extractMenuItemsFromArray(array: any[], source: string) {
         dietary: extractDietaryInfo(item)
       };
       
+      console.log(`Transformed item:`, JSON.stringify(transformedItem, null, 2));
       items.push(transformedItem);
+    } else {
+      console.log(`Skipping item ${i}: no valid name field found. Available fields:`, Object.keys(item));
     }
   }
   
+  console.log(`Extracted ${items.length} items from ${source}`);
   return items;
 }
 
