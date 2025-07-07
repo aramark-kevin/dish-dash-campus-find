@@ -43,7 +43,7 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('First 1000 chars:', responseText.substring(0, 1000));
+    console.log('Full response:', responseText);
 
     let campusDishData;
     try {
@@ -55,7 +55,7 @@ serve(async (req) => {
     }
 
     console.log('=== PARSED CAMPUSDISH DATA ===');
-    console.log('Data structure:', Object.keys(campusDishData));
+    console.log('Full parsed data:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData);
@@ -92,68 +92,53 @@ function transformCampusDishData(data: any) {
   const menuItems = [];
   
   try {
-    // CampusDish API response structure analysis
-    console.log('Analyzing data structure...');
-    
-    // Pattern 1: Direct array of menu items
-    if (Array.isArray(data)) {
-      console.log('Data is array with', data.length, 'items');
-      const extractedItems = extractMenuItemsFromArray(data, 'root');
-      menuItems.push(...extractedItems);
-    }
-    
-    // Pattern 2: Object with menu data properties
-    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-      console.log('Data is object with keys:', Object.keys(data));
+    // Deep recursive search for menu items
+    const findMenuItems = (obj: any, path: string = 'root'): any[] => {
+      const items = [];
+      console.log(`Searching in ${path}:`, typeof obj, Array.isArray(obj) ? `array[${obj.length}]` : Object.keys(obj || {}));
       
-      // Look for menu-related properties - expanded list
-      const menuKeys = [
-        'Menu', 'MenuItems', 'Items', 'Recipes', 'FoodItems', 'LocationMenu', 'FullMenu',
-        'MenuData', 'RecipeData', 'ItemData', 'FoodData', 'MenuList', 'RecipeList',
-        'LocationMenus', 'DiningLocations', 'Locations', 'Services', 'Categories',
-        'Periods', 'MenuPeriods', 'MealPeriods', 'DayParts', 'MenuContent', 'MenuStructure'
-      ];
-      
-      for (const key of menuKeys) {
-        if (data[key]) {
-          console.log(`Found menu data in key: ${key}`);
-          if (Array.isArray(data[key])) {
-            const extractedItems = extractMenuItemsFromArray(data[key], key);
-            menuItems.push(...extractedItems);
-          } else if (typeof data[key] === 'object') {
-            // Recursively check nested objects
-            const nestedItems = transformCampusDishData(data[key]);
-            if (nestedItems.length > 0 && nestedItems[0].id !== 'alberta-no-items') {
-              menuItems.push(...nestedItems);
+      if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+          const item = obj[i];
+          if (item && typeof item === 'object') {
+            // Check if this looks like a menu item
+            const hasNameField = hasAnyField(item, [
+              'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
+              'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label',
+              'ItemDescription', 'MenuDescription', 'ShortName', 'LongName',
+              'FormalName', 'PrintName', 'ServingName', 'FoodItemName', 'ProductTitle'
+            ]);
+            
+            if (hasNameField) {
+              console.log(`Found potential menu item at ${path}[${i}]:`, Object.keys(item));
+              items.push(item);
+            } else {
+              // Recursively search nested objects
+              items.push(...findMenuItems(item, `${path}[${i}]`));
             }
+          }
+        }
+      } else if (obj && typeof obj === 'object') {
+        for (const [key, value] of Object.entries(obj)) {
+          if (value && (Array.isArray(value) || typeof value === 'object')) {
+            items.push(...findMenuItems(value, `${path}.${key}`));
           }
         }
       }
       
-      // Also check all properties for arrays that might contain menu items
-      for (const [key, value] of Object.entries(data)) {
-        if (Array.isArray(value) && value.length > 0) {
-          console.log(`Checking array property: ${key} with ${value.length} items`);
-          // Only process if we haven't already processed this key
-          if (!menuKeys.includes(key)) {
-            const extractedItems = extractMenuItemsFromArray(value, key);
-            if (extractedItems.length > 0) {
-              console.log(`Found ${extractedItems.length} menu items in ${key}`);
-              menuItems.push(...extractedItems);
-            }
-          }
-        } else if (typeof value === 'object' && value !== null) {
-          // Check nested objects too
-          console.log(`Checking nested object: ${key}`);
-          const nestedItems = transformCampusDishData(value);
-          if (nestedItems.length > 0 && nestedItems[0].id !== 'alberta-no-items') {
-            menuItems.push(...nestedItems);
-          }
-        }
+      return items;
+    };
+    
+    const foundItems = findMenuItems(data);
+    console.log(`Found ${foundItems.length} potential menu items`);
+    
+    // Transform found items
+    for (const item of foundItems) {
+      const transformedItem = transformMenuItem(item);
+      if (transformedItem) {
+        menuItems.push(transformedItem);
       }
     }
-
-    console.log(`Total items found: ${menuItems.length}`);
     
   } catch (transformError) {
     console.error('Error during transformation:', transformError);
@@ -174,86 +159,71 @@ function transformCampusDishData(data: any) {
   return uniqueItems;
 }
 
-function extractMenuItemsFromArray(array: any[], source: string) {
-  console.log(`Extracting from array: ${source}, length: ${array.length}`);
-  const items = [];
+function hasAnyField(obj: any, fields: string[]): boolean {
+  return fields.some(field => obj[field] && typeof obj[field] === 'string' && obj[field].trim());
+}
+
+function transformMenuItem(item: any) {
+  console.log('Transforming item:', Object.keys(item));
   
-  for (let i = 0; i < array.length; i++) {
-    const item = array[i];
-    console.log(`Processing item ${i}:`, typeof item, item ? Object.keys(item) : 'null');
-    
-    if (!item || typeof item !== 'object') {
-      console.log(`Skipping item ${i}: not an object`);
-      continue;
-    }
-    
-    // Look for name fields - expanded list including exact CampusDish field names
-    const possibleNameFields = [
-      'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
-      'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label',
-      'ItemDescription', 'MenuDescription', 'ShortName', 'LongName',
-      'FormalName', 'PrintName', 'ServingName', 'FoodItemName', 'ProductTitle'
-    ];
-    
-    let itemName = null;
-    let nameField = null;
-    for (const field of possibleNameFields) {
-      if (item[field] && typeof item[field] === 'string' && item[field].trim()) {
-        itemName = item[field].trim();
-        nameField = field;
-        break;
-      }
-    }
-    
-    if (itemName) {
-      console.log(`Found menu item: "${itemName}" using field: ${nameField}`);
-      
-      // Look for additional nutritional fields
-      const nutritionFields = {
-        calories: ['Calories', 'CaloriesPerServing', 'Energy', 'Kcal', 'Cal', 'TotalCalories'],
-        protein: ['Protein', 'ProteinG', 'ProteinGrams', 'Prot', 'ProteinContent'],
-        fat: ['Fat', 'TotalFat', 'FatG', 'FatGrams', 'FatContent'],
-        carbs: ['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG', 'CarbGrams', 'CHO', 'CarbContent']
-      };
-      
-      const getNutritionValue = (fields: string[]) => {
-        for (const field of fields) {
-          if (item[field] !== undefined && item[field] !== null) {
-            const value = parseFloat(item[field]);
-            if (!isNaN(value)) return value;
-          }
-        }
-        return 0;
-      };
-      
-      const transformedItem = {
-        id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
-        name: itemName,
-        category: item.Category || item.CategoryName || item.Section || item.SectionName || item.MenuCategory || source || 'General',
-        calories: getNutritionValue(nutritionFields.calories),
-        protein: getNutritionValue(nutritionFields.protein),
-        fat: getNutritionValue(nutritionFields.fat),
-        carbs: getNutritionValue(nutritionFields.carbs),
-        allergens: extractAllergens(item),
-        ingredients: item.Ingredients || item.Description || item.LongDescription || item.RecipeDescription || item.ItemDescription || '',
-        dietary: extractDietaryInfo(item)
-      };
-      
-      console.log(`Transformed item:`, transformedItem);
-      items.push(transformedItem);
-    } else {
-      console.log(`Skipping item ${i}: no valid name field found. Available fields:`, Object.keys(item));
-      // Log first few characters of each field to help debug
-      for (const [key, value] of Object.entries(item)) {
-        if (typeof value === 'string' && value.length > 0) {
-          console.log(`  ${key}: "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
-        }
-      }
+  // Look for name fields
+  const possibleNameFields = [
+    'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
+    'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label',
+    'ItemDescription', 'MenuDescription', 'ShortName', 'LongName',
+    'FormalName', 'PrintName', 'ServingName', 'FoodItemName', 'ProductTitle'
+  ];
+  
+  let itemName = null;
+  let nameField = null;
+  for (const field of possibleNameFields) {
+    if (item[field] && typeof item[field] === 'string' && item[field].trim()) {
+      itemName = item[field].trim();
+      nameField = field;
+      break;
     }
   }
   
-  console.log(`Extracted ${items.length} items from ${source}`);
-  return items;
+  if (!itemName) {
+    console.log('No valid name found for item:', Object.keys(item));
+    return null;
+  }
+  
+  console.log(`Found menu item: "${itemName}" using field: ${nameField}`);
+  
+  // Look for additional nutritional fields
+  const nutritionFields = {
+    calories: ['Calories', 'CaloriesPerServing', 'Energy', 'Kcal', 'Cal', 'TotalCalories'],
+    protein: ['Protein', 'ProteinG', 'ProteinGrams', 'Prot', 'ProteinContent'],
+    fat: ['Fat', 'TotalFat', 'FatG', 'FatGrams', 'FatContent'],
+    carbs: ['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG', 'CarbGrams', 'CHO', 'CarbContent']
+  };
+  
+  const getNutritionValue = (fields: string[]) => {
+    for (const field of fields) {
+      if (item[field] !== undefined && item[field] !== null) {
+        const value = parseFloat(item[field]);
+        if (!isNaN(value)) return value;
+      }
+    }
+    return 0;
+  };
+  
+  const transformedItem = {
+    id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
+    name: itemName,
+    category: item.Category || item.CategoryName || item.Section || item.SectionName || item.MenuCategory || 'General',
+    calories: getNutritionValue(nutritionFields.calories),
+    protein: getNutritionValue(nutritionFields.protein),
+    fat: getNutritionValue(nutritionFields.fat),
+    carbs: getNutritionValue(nutritionFields.carbs),
+    allergens: extractAllergens(item),
+    ingredients: item.Ingredients || item.Description || item.LongDescription || item.RecipeDescription || item.ItemDescription || '',
+    dietary: extractDietaryInfo(item)
+  };
+  
+  console.log(`Transformed item:`, transformedItem);
+  return transformedItem;
 }
 
 function extractAllergens(item: any): string[] {
