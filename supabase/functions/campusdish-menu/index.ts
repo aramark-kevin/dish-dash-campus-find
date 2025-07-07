@@ -41,14 +41,19 @@ serve(async (req) => {
     });
 
     console.log(`Response status: ${response.status} ${response.statusText}`);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
+      console.log(`CampusDish API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.log('Error response body:', errorText);
       throw new Error(`CampusDish API error: ${response.status} ${response.statusText}`);
     }
 
     const responseText = await response.text();
-    console.log('Raw response text:', responseText);
+    console.log('=== RAW CAMPUSDISH RESPONSE ===');
+    console.log('Response length:', responseText.length);
+    console.log('First 500 chars:', responseText.substring(0, 500));
+    console.log('Last 500 chars:', responseText.substring(Math.max(0, responseText.length - 500)));
 
     let campusDishData;
     try {
@@ -59,18 +64,28 @@ serve(async (req) => {
       throw new Error('Invalid JSON response from CampusDish API');
     }
 
-    console.log('Parsed CampusDish API response:', JSON.stringify(campusDishData, null, 2));
+    console.log('=== PARSED CAMPUSDISH DATA ===');
+    console.log('Data type:', typeof campusDishData);
+    console.log('Is array:', Array.isArray(campusDishData));
+    console.log('Keys:', campusDishData ? Object.keys(campusDishData) : 'null');
+    console.log('Full structure:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData);
-    console.log('Transformed menu data:', JSON.stringify(transformedMenu, null, 2));
+    console.log('=== FINAL TRANSFORMED MENU ===');
+    console.log('Menu items count:', transformedMenu.length);
+    console.log('Transformed menu:', JSON.stringify(transformedMenu, null, 2));
 
     return new Response(JSON.stringify(transformedMenu), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in campusdish-menu function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error stack:', error.stack);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: 'Check function logs for more information'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -78,94 +93,110 @@ serve(async (req) => {
 });
 
 function transformCampusDishData(data: any) {
+  console.log('=== STARTING TRANSFORMATION ===');
+  
+  if (!data) {
+    console.log('No data provided to transform');
+    return getNoItemsResponse();
+  }
+
   const menuItems = [];
   
   try {
-    console.log('=== TRANSFORMATION DEBUG ===');
-    console.log('Data type:', typeof data);
-    console.log('Data is array:', Array.isArray(data));
-    console.log('Data keys:', data ? Object.keys(data) : 'null/undefined');
+    // Log the complete structure first
+    console.log('Data structure analysis:');
+    console.log('- Type:', typeof data);
+    console.log('- Is Array:', Array.isArray(data));
+    console.log('- Constructor:', data.constructor?.name);
     
-    if (!data) {
-      console.log('No data received');
-      return getNoItemsResponse();
+    if (typeof data === 'object') {
+      console.log('- Object keys:', Object.keys(data));
+      console.log('- Object entries count:', Object.entries(data).length);
     }
 
-    // Log the complete structure to understand the API response
-    console.log('Complete data structure:', JSON.stringify(data, null, 2));
-    
-    // Try multiple possible paths in the CampusDish response
-    let itemsFound = false;
-    
-    // Path 1: Direct array
+    // Try different approaches to find menu items
+    let foundItems = [];
+
+    // Approach 1: Check if data is directly an array of menu items
     if (Array.isArray(data)) {
-      console.log('Processing direct array with', data.length, 'items');
-      for (const item of data) {
-        const transformedItem = transformMenuItem(item, 'Direct Array');
-        if (transformedItem) {
-          menuItems.push(transformedItem);
-          itemsFound = true;
-        }
-      }
+      console.log('Approach 1: Direct array processing');
+      foundItems = data.filter(item => item && (item.Name || item.ItemName || item.MenuItemName));
+      console.log(`Found ${foundItems.length} items in direct array`);
     }
-    
-    // Path 2: Check common CampusDish API response patterns
-    const possiblePaths = [
-      'Menu',
-      'menus', 
-      'MenuSections',
-      'LocationFullMenu',
-      'LocationFullMenu.Menu',
-      'LocationFullMenu.MenuSections',
-      'data',
-      'items',
-      'MenuItems'
-    ];
-    
-    for (const path of possiblePaths) {
-      if (!itemsFound) {
-        const pathData = getNestedProperty(data, path);
-        if (pathData) {
-          console.log(`Found data at path: ${path}`, typeof pathData, Array.isArray(pathData) ? `(${pathData.length} items)` : '');
+
+    // Approach 2: Look for common CampusDish API structure patterns
+    if (foundItems.length === 0 && typeof data === 'object') {
+      console.log('Approach 2: Looking for nested menu structures');
+      
+      const possibleMenuPaths = [
+        'Menu',
+        'LocationFullMenu',
+        'MenuSections',
+        'Sections',
+        'Items',
+        'MenuItems',
+        'Data',
+        'Result'
+      ];
+
+      for (const path of possibleMenuPaths) {
+        if (data[path]) {
+          console.log(`Found data at path: ${path}`);
+          const pathData = data[path];
           
           if (Array.isArray(pathData)) {
+            console.log(`Path ${path} contains array with ${pathData.length} items`);
+            
+            // Check if items are directly menu items
+            const directItems = pathData.filter(item => 
+              item && (item.Name || item.ItemName || item.MenuItemName)
+            );
+            
+            if (directItems.length > 0) {
+              foundItems = directItems;
+              console.log(`Found ${foundItems.length} direct menu items in ${path}`);
+              break;
+            }
+            
+            // Check if items are sections containing menu items
             for (const section of pathData) {
-              console.log('Processing section:', section.Name || section.SectionName || 'Unknown Section');
-              
-              // Look for items in this section
-              const sectionItems = section.MenuItems || section.Items || section.menu_items || section.items || [];
-              console.log(`Section has ${sectionItems.length} items`);
-              
-              for (const item of sectionItems) {
-                const transformedItem = transformMenuItem(item, section.Name || section.SectionName || 'General');
-                if (transformedItem) {
-                  menuItems.push(transformedItem);
-                  itemsFound = true;
+              if (section && typeof section === 'object') {
+                const sectionItems = section.MenuItems || section.Items || section.menu_items || [];
+                if (Array.isArray(sectionItems)) {
+                  console.log(`Section "${section.Name || section.SectionName || 'Unknown'}" has ${sectionItems.length} items`);
+                  foundItems.push(...sectionItems);
                 }
               }
+            }
+            
+            if (foundItems.length > 0) {
+              console.log(`Found ${foundItems.length} items from sections in ${path}`);
+              break;
             }
           }
         }
       }
     }
-    
-    // Path 3: Deep search for any objects that look like menu items
-    if (!itemsFound) {
-      console.log('Performing deep search for menu items...');
-      const foundItems = deepSearchForMenuItems(data);
+
+    // Approach 3: Deep recursive search
+    if (foundItems.length === 0) {
+      console.log('Approach 3: Deep recursive search');
+      foundItems = deepSearchForMenuItems(data);
       console.log(`Deep search found ${foundItems.length} potential menu items`);
-      
-      for (const item of foundItems) {
-        const transformedItem = transformMenuItem(item, 'Deep Search');
-        if (transformedItem) {
-          menuItems.push(transformedItem);
-          itemsFound = true;
-        }
+    }
+
+    // Transform found items
+    for (const item of foundItems) {
+      const transformedItem = transformMenuItem(item);
+      if (transformedItem) {
+        menuItems.push(transformedItem);
       }
     }
-    
-    console.log(`=== TRANSFORMATION COMPLETE ===`);
-    console.log(`Total items found: ${menuItems.length}`);
+
+    console.log(`=== TRANSFORMATION SUMMARY ===`);
+    console.log(`Input data type: ${typeof data}`);
+    console.log(`Raw items found: ${foundItems.length}`);
+    console.log(`Successfully transformed: ${menuItems.length}`);
     
   } catch (transformError) {
     console.error('Error during transformation:', transformError);
@@ -173,84 +204,99 @@ function transformCampusDishData(data: any) {
   }
 
   if (menuItems.length === 0) {
-    console.log('No menu items were successfully transformed, returning fallback');
+    console.log('No menu items found, returning fallback response');
     return getNoItemsResponse();
   }
 
   return menuItems;
 }
 
-function transformMenuItem(item: any, category: string) {
+function transformMenuItem(item: any) {
   if (!item || typeof item !== 'object') {
     return null;
   }
   
-  // Look for name in various possible fields
-  const name = item.Name || item.ItemName || item.MenuItemName || item.DisplayName || item.title || item.Description;
+  // Try multiple possible name fields
+  const name = item.Name || item.ItemName || item.MenuItemName || item.DisplayName || 
+               item.title || item.Description || item.RecipeName;
   
   if (!name) {
-    console.log('Skipping item without name:', Object.keys(item));
+    console.log('Skipping item without recognizable name field. Item keys:', Object.keys(item));
     return null;
   }
   
-  console.log(`Transforming item: ${name}`);
+  console.log(`Transforming item: "${name}"`);
+  
+  // Try to find category information
+  const category = item.Category || item.CategoryName || item.Section || 
+                  item.SectionName || item.MenuSection || 'General';
   
   return {
-    id: `alberta-${item.MenuItemId || item.ItemId || item.Id || Math.random().toString(36).substr(2, 9)}`,
+    id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
     name: name,
     category: category,
-    calories: parseFloat(item.Calories || item.CaloriesPerServing || '0') || 0,
-    protein: parseFloat(item.Protein || '0') || 0,
-    fat: parseFloat(item.Fat || item.TotalFat || '0') || 0,
-    carbs: parseFloat(item.Carbohydrates || item.Carbs || item.TotalCarbohydrates || '0') || 0,
-    allergens: item.Allergens ? 
-      (typeof item.Allergens === 'string' ? item.Allergens.split(',').map((a: string) => a.trim()) : item.Allergens) : 
-      [],
-    ingredients: item.Ingredients || item.Description || item.LongDescription || '',
+    calories: parseFloat(item.Calories || item.CaloriesPerServing || item.Energy || '0') || 0,
+    protein: parseFloat(item.Protein || item.ProteinG || '0') || 0,
+    fat: parseFloat(item.Fat || item.TotalFat || item.FatG || '0') || 0,
+    carbs: parseFloat(item.Carbohydrates || item.Carbs || item.TotalCarbohydrates || item.CarbsG || '0') || 0,
+    allergens: extractAllergens(item),
+    ingredients: item.Ingredients || item.Description || item.LongDescription || item.RecipeDescription || '',
     dietary: extractDietaryInfo(item)
   };
 }
 
-function getNestedProperty(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current && current[key], obj);
-}
-
-function deepSearchForMenuItems(obj: any, items: any[] = []): any[] {
-  if (!obj || typeof obj !== 'object') {
-    return items;
+function extractAllergens(item: any): string[] {
+  const allergens = item.Allergens || item.AllergenInfo || item.Allergen || [];
+  
+  if (typeof allergens === 'string') {
+    return allergens.split(',').map((a: string) => a.trim()).filter(Boolean);
   }
   
-  // Check if this object looks like a menu item
-  if (obj.Name || obj.ItemName || obj.MenuItemName) {
-    items.push(obj);
+  if (Array.isArray(allergens)) {
+    return allergens.map(a => typeof a === 'string' ? a : a.Name || a.AllergenName || '').filter(Boolean);
   }
   
-  // Recursively search nested objects and arrays
-  for (const value of Object.values(obj)) {
-    if (Array.isArray(value)) {
-      for (const arrayItem of value) {
-        deepSearchForMenuItems(arrayItem, items);
-      }
-    } else if (value && typeof value === 'object') {
-      deepSearchForMenuItems(value, items);
-    }
-  }
-  
-  return items;
+  return [];
 }
 
 function extractDietaryInfo(item: any): string[] {
   const dietary = [];
   
-  // Common dietary flags from CampusDish
-  if (item.IsVegan || item.Vegan) dietary.push('vegan');
-  if (item.IsVegetarian || item.Vegetarian) dietary.push('vegetarian');
-  if (item.IsGlutenFree || item.GlutenFree) dietary.push('gluten-free');
-  if (item.IsHalal || item.Halal) dietary.push('halal');
-  if (item.IsLocal || item.Local) dietary.push('locally-grown');
-  if (item.IsSustainable || item.Sustainable) dietary.push('sustainable');
+  // Check various dietary flag fields
+  if (item.IsVegan || item.Vegan || item.vegan) dietary.push('vegan');
+  if (item.IsVegetarian || item.Vegetarian || item.vegetarian) dietary.push('vegetarian');
+  if (item.IsGlutenFree || item.GlutenFree || item.glutenFree) dietary.push('gluten-free');
+  if (item.IsHalal || item.Halal || item.halal) dietary.push('halal');
+  if (item.IsLocal || item.Local || item.local) dietary.push('locally-grown');
+  if (item.IsSustainable || item.Sustainable || item.sustainable) dietary.push('sustainable');
   
   return dietary;
+}
+
+function deepSearchForMenuItems(obj: any, items: any[] = [], depth: number = 0): any[] {
+  if (depth > 10) return items; // Prevent infinite recursion
+  
+  if (!obj || typeof obj !== 'object') {
+    return items;
+  }
+  
+  // Check if this object looks like a menu item
+  if (obj.Name || obj.ItemName || obj.MenuItemName || obj.RecipeName) {
+    items.push(obj);
+  }
+  
+  // Recursively search nested objects and arrays
+  for (const [key, value] of Object.entries(obj)) {
+    if (Array.isArray(value)) {
+      for (const arrayItem of value) {
+        deepSearchForMenuItems(arrayItem, items, depth + 1);
+      }
+    } else if (value && typeof value === 'object') {
+      deepSearchForMenuItems(value, items, depth + 1);
+    }
+  }
+  
+  return items;
 }
 
 function getNoItemsResponse() {
@@ -263,7 +309,7 @@ function getNoItemsResponse() {
     fat: 0,
     carbs: 0,
     allergens: [],
-    ingredients: 'Please check back later or try a different date',
+    ingredients: 'Please check back later or try a different date. The dining hall may not have published their menu for today yet.',
     dietary: []
   }];
 }
