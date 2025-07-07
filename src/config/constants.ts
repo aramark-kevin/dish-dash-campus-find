@@ -1,3 +1,4 @@
+
 // Configuration constants for the application
 export const APP_CONFIG = {
   // Logo service configuration
@@ -26,7 +27,7 @@ export const APP_CONFIG = {
 };
 
 // Valid school IDs for validation
-export const VALID_SCHOOL_IDS = ['bishops', 'carleton', 'mcmaster'] as const;
+export const VALID_SCHOOL_IDS = ['bishops', 'carleton', 'mcmaster', 'alberta'] as const;
 export type ValidSchoolId = typeof VALID_SCHOOL_IDS[number];
 
 // Validation helper functions

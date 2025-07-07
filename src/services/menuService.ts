@@ -1,4 +1,3 @@
-
 // Mock data structure - easily replaceable with real CampusDish API calls
 const mockMenuData = {
   bishops: [
@@ -18,6 +17,12 @@ const mockMenuData = {
     { id: 'mcmaster-2', name: 'Thai Green Curry', category: 'Thai' },
     { id: 'mcmaster-3', name: 'Quinoa Power Bowl', category: 'Healthy' },
     { id: 'mcmaster-4', name: 'Classic Cheeseburger', category: 'Burgers' }
+  ],
+  alberta: [
+    { id: 'alberta-1', name: 'Alberta Beef Brisket', category: 'BBQ' },
+    { id: 'alberta-2', name: 'Wild Rice Stuffed Bell Peppers', category: 'Vegetarian' },
+    { id: 'alberta-3', name: 'Prairie Chicken Schnitzel', category: 'German' },
+    { id: 'alberta-4', name: 'Bison Burger with Sweet Potato Fries', category: 'Burgers' }
   ]
 };
 
@@ -141,6 +146,46 @@ const mockNutritionData = {
     allergens: ['Gluten', 'Dairy'],
     ingredients: 'Beef patty, cheddar cheese, lettuce, tomato, onion, pickle, sesame seed bun, french fries',
     dietary: ['locally-grown']
+  },
+  'alberta-1': {
+    name: 'Alberta Beef Brisket',
+    calories: 720,
+    protein: 45,
+    fat: 32,
+    carbs: 38,
+    allergens: ['Gluten'],
+    ingredients: 'Alberta beef brisket, BBQ sauce, cornbread, coleslaw, baked beans, pickles',
+    dietary: ['locally-grown']
+  },
+  'alberta-2': {
+    name: 'Wild Rice Stuffed Bell Peppers',
+    calories: 380,
+    protein: 15,
+    fat: 8,
+    carbs: 68,
+    allergens: [],
+    ingredients: 'Wild rice, bell peppers, mushrooms, onions, celery, vegetable broth, herbs',
+    dietary: ['vegan', 'gluten-free', 'locally-grown']
+  },
+  'alberta-3': {
+    name: 'Prairie Chicken Schnitzel',
+    calories: 620,
+    protein: 38,
+    fat: 28,
+    carbs: 48,
+    allergens: ['Gluten', 'Eggs'],
+    ingredients: 'Chicken breast, breadcrumbs, flour, eggs, spätzle, lingonberry sauce, cucumber salad',
+    dietary: ['locally-grown']
+  },
+  'alberta-4': {
+    name: 'Bison Burger with Sweet Potato Fries',
+    calories: 680,
+    protein: 42,
+    fat: 25,
+    carbs: 58,
+    allergens: ['Gluten'],
+    ingredients: 'Ground bison, brioche bun, cheddar cheese, lettuce, tomato, sweet potato fries, aioli',
+    dietary: ['locally-grown', 'sustainable']
   }
 };
 

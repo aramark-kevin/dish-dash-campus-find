@@ -7,7 +7,8 @@ import SchoolSelector from '@/components/SchoolSelector';
 const schools = [
   { id: 'bishops', name: "Bishop's University", domain: 'ubishops.ca' },
   { id: 'carleton', name: 'Carleton University', domain: 'carleton.ca' },
-  { id: 'mcmaster', name: 'McMaster University', domain: 'mcmaster.ca' }
+  { id: 'mcmaster', name: 'McMaster University', domain: 'mcmaster.ca' },
+  { id: 'alberta', name: 'University of Alberta', domain: 'ualberta.ca' }
 ];
 
 const SchoolSelection = () => {
