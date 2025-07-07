@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -43,31 +42,39 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('Full response:', responseText);
+    console.log('First 500 chars:', responseText.substring(0, 500));
+    console.log('Last 500 chars:', responseText.substring(responseText.length - 500));
 
     let campusDishData;
     try {
       campusDishData = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError);
+      console.log('Raw response that failed to parse:', responseText);
       throw new Error('Invalid JSON response from CampusDish API');
     }
 
-    console.log('=== PARSED CAMPUSDISH DATA ===');
-    console.log('Full parsed data:', JSON.stringify(campusDishData, null, 2));
+    console.log('=== PARSED CAMPUSDISH DATA STRUCTURE ===');
+    console.log('Data type:', typeof campusDishData);
+    console.log('Data keys:', Object.keys(campusDishData || {}));
+    console.log('Full parsed data structure:', JSON.stringify(campusDishData, null, 2));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData, date);
     
     console.log('=== FINAL TRANSFORMED MENU ===');
-    console.log('Menu items count:', transformedMenu.length);
-    console.log('Transformed menu:', JSON.stringify(transformedMenu, null, 2));
+    console.log('Transformed menu type:', typeof transformedMenu);
+    console.log('Transformed menu length:', Array.isArray(transformedMenu) ? transformedMenu.length : 'Not an array');
+    console.log('Final transformed menu:', JSON.stringify(transformedMenu, null, 2));
 
     return new Response(JSON.stringify(transformedMenu), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in campusdish-menu function:', error);
+    console.error('=== ERROR IN CAMPUSDISH-MENU FUNCTION ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: error.message,
       details: 'Check function logs for more information'
@@ -88,32 +95,45 @@ function transformCampusDishData(data: any, date: string) {
     return getNoItemsResponse("No data received from CampusDish API");
   }
 
-  console.log('Data keys:', Object.keys(data));
+  console.log('Available top-level keys:', Object.keys(data));
   
   // Check for different possible root structures
-  const possibleRoots = ['MealPeriods', 'mealPeriods', 'Menu', 'menu', 'MenuData', 'menuData'];
+  const possibleRoots = ['MealPeriods', 'mealPeriods', 'Menu', 'menu', 'MenuData', 'menuData', 'Data', 'data'];
   let mealPeriods = null;
+  let rootKey = null;
   
   for (const root of possibleRoots) {
     if (data[root]) {
       console.log(`Found meal periods under key: ${root}`);
+      console.log(`Type of ${root}:`, typeof data[root]);
+      console.log(`Is ${root} an array:`, Array.isArray(data[root]));
       mealPeriods = data[root];
+      rootKey = root;
       break;
     }
   }
   
   if (!mealPeriods) {
     console.log('No meal periods found in any expected location');
-    console.log('Available keys:', Object.keys(data));
-    return getNoItemsResponse("No meal periods found in the menu data structure");
+    console.log('Attempting to check if data itself is the meal periods array...');
+    if (Array.isArray(data)) {
+      console.log('Data itself is an array, treating as meal periods');
+      mealPeriods = data;
+      rootKey = 'root';
+    } else {
+      console.log('Available keys:', Object.keys(data));
+      console.log('Sample of data structure:', JSON.stringify(data, null, 2).substring(0, 1000));
+      return getNoItemsResponse("No meal periods found in the menu data structure. Check logs for data structure details.");
+    }
   }
 
   if (!Array.isArray(mealPeriods)) {
-    console.log('Meal periods is not an array:', typeof mealPeriods);
+    console.log(`Meal periods under ${rootKey} is not an array:`, typeof mealPeriods);
+    console.log('Meal periods content:', JSON.stringify(mealPeriods, null, 2).substring(0, 500));
     return getNoItemsResponse("Meal periods data is not in expected array format");
   }
 
-  console.log(`Found ${mealPeriods.length} meal periods`);
+  console.log(`Found ${mealPeriods.length} meal periods in ${rootKey}`);
   
   const menuItems = [];
   let totalItemsFound = 0;
@@ -126,19 +146,22 @@ function transformCampusDishData(data: any, date: string) {
     console.log('Meal period keys:', Object.keys(mealPeriod));
     
     // Check for different possible station keys
-    const possibleStationKeys = ['Stations', 'stations', 'Station', 'station'];
+    const possibleStationKeys = ['Stations', 'stations', 'Station', 'station', 'Categories', 'categories'];
     let stations = null;
     
     for (const key of possibleStationKeys) {
       if (mealPeriod[key]) {
         console.log(`Found stations under key: ${key}`);
+        console.log(`Stations type:`, typeof mealPeriod[key]);
+        console.log(`Stations is array:`, Array.isArray(mealPeriod[key]));
         stations = mealPeriod[key];
         break;
       }
     }
     
     if (!stations || !Array.isArray(stations)) {
-      console.log(`No stations found for meal period: ${mealPeriodName}`);
+      console.log(`No stations array found for meal period: ${mealPeriodName}`);
+      console.log('Available keys in meal period:', Object.keys(mealPeriod));
       continue;
     }
     
@@ -152,19 +175,22 @@ function transformCampusDishData(data: any, date: string) {
       console.log('Station keys:', Object.keys(station));
       
       // Check for different possible subcategory keys
-      const possibleSubcategoryKeys = ['SubCategories', 'subCategories', 'SubCategory', 'subCategory', 'Categories', 'categories'];
+      const possibleSubcategoryKeys = ['SubCategories', 'subCategories', 'SubCategory', 'subCategory', 'Categories', 'categories', 'Items', 'items'];
       let subCategories = null;
       
       for (const key of possibleSubcategoryKeys) {
         if (station[key]) {
           console.log(`Found subcategories under key: ${key}`);
+          console.log(`SubCategories type:`, typeof station[key]);
+          console.log(`SubCategories is array:`, Array.isArray(station[key]));
           subCategories = station[key];
           break;
         }
       }
       
       if (!subCategories || !Array.isArray(subCategories)) {
-        console.log(`No subcategories found for station: ${stationName}`);
+        console.log(`No subcategories array found for station: ${stationName}`);
+        console.log('Available keys in station:', Object.keys(station));
         continue;
       }
       
@@ -184,13 +210,16 @@ function transformCampusDishData(data: any, date: string) {
         for (const key of possibleItemKeys) {
           if (subCategory[key]) {
             console.log(`Found items under key: ${key}`);
+            console.log(`Items type:`, typeof subCategory[key]);
+            console.log(`Items is array:`, Array.isArray(subCategory[key]));
             items = subCategory[key];
             break;
           }
         }
         
         if (!items || !Array.isArray(items)) {
-          console.log(`No items found for subcategory: ${subCategoryName}`);
+          console.log(`No items array found for subcategory: ${subCategoryName}`);
+          console.log('Available keys in subcategory:', Object.keys(subCategory));
           continue;
         }
         
@@ -201,14 +230,14 @@ function transformCampusDishData(data: any, date: string) {
           const item = items[iIndex];
           console.log(`\n--- Processing Item ${iIndex + 1} ---`);
           console.log('Item keys:', Object.keys(item));
-          console.log('Item data:', JSON.stringify(item, null, 2));
+          console.log('Item sample data:', JSON.stringify(item, null, 2).substring(0, 300));
           
           const transformedItem = transformMenuItem(item, date, mealPeriodName, stationName, subCategoryName);
           if (transformedItem) {
             menuItems.push(transformedItem);
             console.log(`Successfully transformed item: ${transformedItem.name}`);
           } else {
-            console.log('Failed to transform item');
+            console.log('Failed to transform item - no valid name found');
           }
         }
       }
@@ -249,6 +278,7 @@ function transformMenuItem(item: any, date: string, mealPeriod: string, station:
   
   if (!itemName) {
     console.log('No valid name found for item with keys:', Object.keys(item));
+    console.log('Item data:', JSON.stringify(item, null, 2));
     return null;
   }
   
