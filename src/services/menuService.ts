@@ -204,7 +204,7 @@ export const fetchMenu = async (schoolId: string) => {
       const today = new Date();
       const dateString = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
       
-      console.log(`Fetching Alberta menu from CampusDish for date: ${dateString}`);
+      console.log(`Fetching Alberta menu from CampusDish for today: ${dateString}`);
       
       const { data, error } = await supabase.functions.invoke('campusdish-menu', {
         body: { 
