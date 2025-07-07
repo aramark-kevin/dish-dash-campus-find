@@ -23,36 +23,54 @@ serve(async (req) => {
       throw new Error('CampusDish credentials not configured');
     }
 
-    // Create basic auth header
-    const basicAuth = btoa(`${username}:${password}`);
+    console.log('Using credentials:', { username, password: password.substring(0, 3) + '***' });
+
+    // Try the direct URL format first (with credentials in URL)
+    const directUrl = `https://${encodeURIComponent(username)}:${encodeURIComponent(password)}@ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
     
-    const campusDishUrl = `https://ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
+    console.log(`Attempting direct URL access: ${directUrl.replace(password, '***')}`);
     
-    console.log(`Fetching CampusDish menu from: ${campusDishUrl}`);
-    
-    const response = await fetch(campusDishUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${basicAuth}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'NutriCheck/1.0'
-      },
-    });
+    let response;
+    try {
+      response = await fetch(directUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'NutriCheck/1.0',
+          'Cache-Control': 'no-cache'
+        },
+      });
+    } catch (directError) {
+      console.log('Direct URL failed, trying basic auth:', directError);
+      
+      // Fallback to basic auth header
+      const basicAuth = btoa(`${username}:${password}`);
+      const basicUrl = `https://ualberta.campusdish.com/api/Service.svc/menu/locationfullmenu/${locationId}?date=${date}`;
+      
+      response = await fetch(basicUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${basicAuth}`,
+          'Accept': 'application/json',
+          'User-Agent': 'NutriCheck/1.0',
+          'Cache-Control': 'no-cache'
+        },
+      });
+    }
 
     console.log(`Response status: ${response.status} ${response.statusText}`);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
-      console.log(`CampusDish API error: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
       console.log('Error response body:', errorText);
-      throw new Error(`CampusDish API error: ${response.status} ${response.statusText}`);
+      throw new Error(`CampusDish API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('Response text:', responseText);
+    console.log('First 500 chars:', responseText.substring(0, 500));
 
     let campusDishData;
     try {
@@ -64,13 +82,13 @@ serve(async (req) => {
     }
 
     console.log('=== PARSED CAMPUSDISH DATA ===');
-    console.log('Data:', JSON.stringify(campusDishData, null, 2));
+    console.log('Data structure:', Object.keys(campusDishData));
 
     // Transform CampusDish data to match our expected format
     const transformedMenu = transformCampusDishData(campusDishData);
     console.log('=== FINAL TRANSFORMED MENU ===');
     console.log('Menu items count:', transformedMenu.length);
-    console.log('Transformed menu:', JSON.stringify(transformedMenu, null, 2));
+    console.log('Sample items:', transformedMenu.slice(0, 3));
 
     return new Response(JSON.stringify(transformedMenu), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -91,7 +109,7 @@ serve(async (req) => {
 function transformCampusDishData(data: any) {
   console.log('=== STARTING TRANSFORMATION ===');
   console.log('Input data type:', typeof data);
-  console.log('Input data:', JSON.stringify(data, null, 2));
+  console.log('Input data keys:', data ? Object.keys(data) : 'null');
   
   if (!data) {
     console.log('No data provided to transform');
@@ -102,7 +120,7 @@ function transformCampusDishData(data: any) {
   
   try {
     // CampusDish API response structure analysis
-    // Let's look for common patterns in CampusDish API responses
+    console.log('Analyzing data structure...');
     
     // Pattern 1: Direct array of menu items
     if (Array.isArray(data)) {
@@ -115,8 +133,13 @@ function transformCampusDishData(data: any) {
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
       console.log('Data is object with keys:', Object.keys(data));
       
-      // Look for menu-related properties
-      const menuKeys = ['Menu', 'MenuItems', 'Items', 'Recipes', 'FoodItems', 'LocationMenu', 'FullMenu'];
+      // Look for menu-related properties - expanded list
+      const menuKeys = [
+        'Menu', 'MenuItems', 'Items', 'Recipes', 'FoodItems', 'LocationMenu', 'FullMenu',
+        'MenuData', 'RecipeData', 'ItemData', 'FoodData', 'MenuList', 'RecipeList',
+        'LocationMenus', 'DiningLocations', 'Locations', 'Services', 'Categories',
+        'Periods', 'MenuPeriods', 'MealPeriods', 'DayParts'
+      ];
       
       for (const key of menuKeys) {
         if (data[key]) {
@@ -138,10 +161,20 @@ function transformCampusDishData(data: any) {
       for (const [key, value] of Object.entries(data)) {
         if (Array.isArray(value) && value.length > 0) {
           console.log(`Checking array property: ${key} with ${value.length} items`);
-          const extractedItems = extractMenuItemsFromArray(value, key);
-          if (extractedItems.length > 0) {
-            console.log(`Found ${extractedItems.length} menu items in ${key}`);
-            menuItems.push(...extractedItems);
+          // Only process if we haven't already processed this key
+          if (!menuKeys.includes(key)) {
+            const extractedItems = extractMenuItemsFromArray(value, key);
+            if (extractedItems.length > 0) {
+              console.log(`Found ${extractedItems.length} menu items in ${key}`);
+              menuItems.push(...extractedItems);
+            }
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          // Check nested objects too
+          console.log(`Checking nested object: ${key}`);
+          const nestedItems = transformCampusDishData(value);
+          if (nestedItems.length > 0 && nestedItems[0].id !== 'alberta-no-items') {
+            menuItems.push(...nestedItems);
           }
         }
       }
@@ -174,17 +207,19 @@ function extractMenuItemsFromArray(array: any[], source: string) {
   
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
-    console.log(`Processing item ${i}:`, JSON.stringify(item, null, 2));
+    console.log(`Processing item ${i}:`, typeof item, item ? Object.keys(item) : 'null');
     
     if (!item || typeof item !== 'object') {
       console.log(`Skipping item ${i}: not an object`);
       continue;
     }
     
-    // Look for name fields
+    // Look for name fields - expanded list
     const possibleNameFields = [
       'Name', 'ItemName', 'MenuItemName', 'DisplayName', 'Title',
-      'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label'
+      'RecipeName', 'ProductName', 'FoodName', 'Description', 'Label',
+      'ItemDescription', 'MenuDescription', 'ShortName', 'LongName',
+      'FormalName', 'PrintName', 'ServingName'
     ];
     
     let itemName = null;
@@ -200,23 +235,47 @@ function extractMenuItemsFromArray(array: any[], source: string) {
     if (itemName) {
       console.log(`Found menu item: "${itemName}" using field: ${nameField}`);
       
+      // Look for additional nutritional fields
+      const nutritionFields = {
+        calories: ['Calories', 'CaloriesPerServing', 'Energy', 'Kcal', 'Cal'],
+        protein: ['Protein', 'ProteinG', 'ProteinGrams', 'Prot'],
+        fat: ['Fat', 'TotalFat', 'FatG', 'FatGrams'],
+        carbs: ['Carbohydrates', 'Carbs', 'TotalCarbohydrates', 'CarbsG', 'CarbGrams', 'CHO']
+      };
+      
+      const getNutritionValue = (fields: string[]) => {
+        for (const field of fields) {
+          if (item[field] !== undefined && item[field] !== null) {
+            const value = parseFloat(item[field]);
+            if (!isNaN(value)) return value;
+          }
+        }
+        return 0;
+      };
+      
       const transformedItem = {
         id: `alberta-${item.MenuItemId || item.ItemId || item.Id || item.RecipeId || Math.random().toString(36).substr(2, 9)}`,
         name: itemName,
-        category: item.Category || item.CategoryName || item.Section || item.SectionName || source || 'General',
-        calories: parseFloat(item.Calories || item.CaloriesPerServing || item.Energy || '0') || 0,
-        protein: parseFloat(item.Protein || item.ProteinG || '0') || 0,
-        fat: parseFloat(item.Fat || item.TotalFat || item.FatG || '0') || 0,
-        carbs: parseFloat(item.Carbohydrates || item.Carbs || item.TotalCarbohydrates || item.CarbsG || '0') || 0,
+        category: item.Category || item.CategoryName || item.Section || item.SectionName || item.MenuCategory || source || 'General',
+        calories: getNutritionValue(nutritionFields.calories),
+        protein: getNutritionValue(nutritionFields.protein),
+        fat: getNutritionValue(nutritionFields.fat),
+        carbs: getNutritionValue(nutritionFields.carbs),
         allergens: extractAllergens(item),
-        ingredients: item.Ingredients || item.Description || item.LongDescription || item.RecipeDescription || '',
+        ingredients: item.Ingredients || item.Description || item.LongDescription || item.RecipeDescription || item.ItemDescription || '',
         dietary: extractDietaryInfo(item)
       };
       
-      console.log(`Transformed item:`, JSON.stringify(transformedItem, null, 2));
+      console.log(`Transformed item:`, transformedItem);
       items.push(transformedItem);
     } else {
       console.log(`Skipping item ${i}: no valid name field found. Available fields:`, Object.keys(item));
+      // Log first few characters of each field to help debug
+      for (const [key, value] of Object.entries(item)) {
+        if (typeof value === 'string' && value.length > 0) {
+          console.log(`  ${key}: "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        }
+      }
     }
   }
   
@@ -225,14 +284,18 @@ function extractMenuItemsFromArray(array: any[], source: string) {
 }
 
 function extractAllergens(item: any): string[] {
-  const allergens = item.Allergens || item.AllergenInfo || item.Allergen || [];
+  const allergenFields = ['Allergens', 'AllergenInfo', 'Allergen', 'AllergenList', 'Allergies'];
   
-  if (typeof allergens === 'string') {
-    return allergens.split(',').map((a: string) => a.trim()).filter(Boolean);
-  }
-  
-  if (Array.isArray(allergens)) {
-    return allergens.map(a => typeof a === 'string' ? a : a.Name || a.AllergenName || '').filter(Boolean);
+  for (const field of allergenFields) {
+    const allergens = item[field];
+    
+    if (typeof allergens === 'string' && allergens.trim()) {
+      return allergens.split(',').map((a: string) => a.trim()).filter(Boolean);
+    }
+    
+    if (Array.isArray(allergens)) {
+      return allergens.map(a => typeof a === 'string' ? a : a.Name || a.AllergenName || '').filter(Boolean);
+    }
   }
   
   return [];
@@ -242,12 +305,23 @@ function extractDietaryInfo(item: any): string[] {
   const dietary = [];
   
   // Check various dietary flag fields
-  if (item.IsVegan || item.Vegan || item.vegan) dietary.push('vegan');
-  if (item.IsVegetarian || item.Vegetarian || item.vegetarian) dietary.push('vegetarian');
-  if (item.IsGlutenFree || item.GlutenFree || item.glutenFree) dietary.push('gluten-free');
-  if (item.IsHalal || item.Halal || item.halal) dietary.push('halal');
-  if (item.IsLocal || item.Local || item.local) dietary.push('locally-grown');
-  if (item.IsSustainable || item.Sustainable || item.sustainable) dietary.push('sustainable');
+  const dietaryFlags = [
+    { flags: ['IsVegan', 'Vegan', 'vegan'], label: 'vegan' },
+    { flags: ['IsVegetarian', 'Vegetarian', 'vegetarian'], label: 'vegetarian' },
+    { flags: ['IsGlutenFree', 'GlutenFree', 'glutenFree', 'GF'], label: 'gluten-free' },
+    { flags: ['IsHalal', 'Halal', 'halal'], label: 'halal' },
+    { flags: ['IsLocal', 'Local', 'local', 'LocallyGrown'], label: 'locally-grown' },
+    { flags: ['IsSustainable', 'Sustainable', 'sustainable'], label: 'sustainable' }
+  ];
+  
+  for (const { flags, label } of dietaryFlags) {
+    for (const flag of flags) {
+      if (item[flag] === true || item[flag] === 'true' || item[flag] === 1) {
+        dietary.push(label);
+        break;
+      }
+    }
+  }
   
   return dietary;
 }
