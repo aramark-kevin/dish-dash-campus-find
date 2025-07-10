@@ -42,9 +42,8 @@ serve(async (req) => {
     const responseText = await response.text();
     console.log('=== RAW CAMPUSDISH RESPONSE ===');
     console.log('Response length:', responseText.length);
-    console.log('COMPLETE RESPONSE TEXT:', responseText);
-    console.log('First 1000 chars:', responseText.substring(0, 1000));
-    console.log('Last 1000 chars:', responseText.substring(responseText.length - 1000));
+    console.log('First 500 chars:', responseText.substring(0, 500));
+    console.log('Last 500 chars:', responseText.substring(responseText.length - 500));
 
     let campusDishData;
     try {
